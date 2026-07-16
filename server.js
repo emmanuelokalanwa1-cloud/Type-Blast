@@ -44,6 +44,11 @@ const wss = new WebSocket.Server({ port: PORT });
 // How long a room can sit open with no guest before it's discarded.
 const ROOM_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 
+// How long a room stays reserved after ONE side disconnects mid-match,
+// giving them a window to reconnect with the same room code instead of
+// the other player being stuck waiting on a room that's gone forever.
+const RECONNECT_GRACE_MS = 45 * 1000; // 45 seconds
+
 // How often we ping every connected client. Most reverse proxies /
 // load balancers (including the ones Railway/Fly put in front of your
 // app) will silently close a WebSocket that's been idle too long
@@ -79,6 +84,8 @@ function closeRoom(code, reason) {
 	const room = rooms.get(code);
 	if (!room) return;
 	clearTimeout(room.timeout);
+	clearTimeout(room.hostGraceTimeout);
+	clearTimeout(room.guestGraceTimeout);
 	if (room.hostSocket) {
 		room.hostSocket.roomCode = null;
 		send(room.hostSocket, { type: 'opponent_left', reason });
@@ -88,6 +95,40 @@ function closeRoom(code, reason) {
 		send(room.guestSocket, { type: 'opponent_left', reason });
 	}
 	rooms.delete(code);
+}
+
+// Called when ONE side of a room disconnects. Rather than destroying the
+// whole room immediately (which would strand the other player with a
+// dead room code), this clears just that side's socket slot and starts
+// a grace-period timer. If the disconnected player reconnects with a
+// "rejoin" message using the same code within that window, they get
+// reattached to the same room. If the window expires first, the room
+// is fully closed via closeRoom().
+function handleSideDisconnect(code, role) {
+	const room = rooms.get(code);
+	if (!room) return;
+
+	const otherRole = role === 'host' ? 'guest' : 'host';
+	const otherSocket = room[otherRole + 'Socket'];
+
+	room[role + 'Socket'] = null;
+
+	// If the room never actually got matched (e.g. host alone, no guest
+	// ever joined), there's no "other side" to notify and no reconnect
+	// scenario worth preserving - just tear it down.
+	if (!otherSocket) {
+		closeRoom(code, 'opponent_disconnected');
+		return;
+	}
+
+	send(otherSocket, { type: 'opponent_left', reason: 'opponent_disconnected_temporarily' });
+
+	const graceTimeoutKey = role + 'GraceTimeout';
+	room[graceTimeoutKey] = setTimeout(() => {
+		// Grace period expired with nobody reconnecting into this slot -
+		// now actually close the room for good.
+		closeRoom(code, 'reconnect_window_expired');
+	}, RECONNECT_GRACE_MS);
 }
 
 wss.on('connection', (socket) => {
@@ -165,14 +206,49 @@ wss.on('connection', (socket) => {
 				break;
 			}
 
+			case 'rejoin': {
+				// Reconnecting into a room this socket's previous connection
+				// was already part of, using the same code and the same
+				// role it had before disconnecting.
+				const code = (msg.code || '').toUpperCase().trim();
+				const role = msg.role === 'host' ? 'host' : (msg.role === 'guest' ? 'guest' : null);
+				const room = rooms.get(code);
+
+				if (!room || !role) {
+					send(socket, { type: 'rejoin_failed', reason: 'not_found' });
+					return;
+				}
+				if (room[role + 'Socket']) {
+					// That slot is already occupied by a live connection -
+					// either someone else is already reconnected there, or
+					// this is a stale duplicate rejoin attempt.
+					send(socket, { type: 'rejoin_failed', reason: 'slot_occupied' });
+					return;
+				}
+
+				clearTimeout(room[role + 'GraceTimeout']);
+				room[role + 'Socket'] = socket;
+				socket.roomCode = code;
+				socket.role = role;
+
+				const otherRole = role === 'host' ? 'guest' : 'host';
+				const otherSocket = room[otherRole + 'Socket'];
+
+				send(socket, { type: 'matched', role });
+				if (otherSocket) {
+					send(otherSocket, { type: 'matched', role: otherRole });
+				}
+				break;
+			}
+
 			default:
 				send(socket, { type: 'error', message: 'Unknown message type: ' + msg.type });
 		}
 	});
 
 	socket.on('close', () => {
-		if (socket.roomCode) {
-			closeRoom(socket.roomCode, 'opponent_disconnected');
+		if (socket.roomCode && socket.role) {
+			handleSideDisconnect(socket.roomCode, socket.role);
 		}
 	});
 });
