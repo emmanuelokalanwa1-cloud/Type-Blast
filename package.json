@@ -1,7 +1,7 @@
 {
-  "name": "keys-learning-relay-server",
-  "version": "1.0.0",
-  "description": "WebSocket relay pairing two Keys Learning clients for real-internet ONLINE 1v1 matches.",
+  "name": "type-blast-relay-server",
+  "version": "2.0.0",
+  "description": "WebSocket relay server for Type Blast: 1v1 Online Versus + Online Tournaments.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
