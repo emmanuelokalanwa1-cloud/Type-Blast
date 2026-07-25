@@ -1,0 +1,38 @@
+[gd_resource type="Theme" format=3 uid="uid://8icwpygm7620"]
+
+[ext_resource type="FontFile" uid="uid://bwfu4jgkh5n1s" path="res://assets/fonts/SpaceMono-Regular.ttf" id="1_spacemono"]
+[ext_resource type="Texture2D" uid="uid://cifpqiaiiokbd" path="res://assets/ui/arcade/buttons_blank/button_blank_grey02.png" id="2_arcade"]
+[ext_resource type="Texture2D" uid="uid://c6why7xmf8kw" path="res://assets/ui/arcade/buttons_blank/button_blank_orange02.png" id="3_arcadepressed"]
+
+[sub_resource type="StyleBoxTexture" id="SBT_normal"]
+texture = ExtResource("2_arcade")
+texture_margin_left = 16.0
+texture_margin_top = 14.0
+texture_margin_right = 16.0
+texture_margin_bottom = 14.0
+
+[sub_resource type="StyleBoxTexture" id="SBT_hover"]
+texture = ExtResource("2_arcade")
+texture_margin_left = 16.0
+texture_margin_top = 14.0
+texture_margin_right = 16.0
+texture_margin_bottom = 14.0
+modulate_color = Color(1.12, 1.12, 1.12, 1)
+
+[sub_resource type="StyleBoxTexture" id="SBT_pressed"]
+texture = ExtResource("3_arcadepressed")
+texture_margin_left = 16.0
+texture_margin_top = 14.0
+texture_margin_right = 16.0
+texture_margin_bottom = 14.0
+
+[resource]
+default_font = ExtResource("1_spacemono")
+default_font_size = 18
+Button/colors/font_color = Color(0.12, 0.12, 0.14, 1)
+Button/colors/font_hover_color = Color(0.08, 0.08, 0.1, 1)
+Button/colors/font_pressed_color = Color(0.08, 0.06, 0.02, 1)
+Button/styles/focus = SubResource("SBT_normal")
+Button/styles/hover = SubResource("SBT_hover")
+Button/styles/normal = SubResource("SBT_normal")
+Button/styles/pressed = SubResource("SBT_pressed")

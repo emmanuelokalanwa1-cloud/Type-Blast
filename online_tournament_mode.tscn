@@ -1,0 +1,8 @@
+[gd_scene format=3 uid="uid://dxgdpgfstp448"]
+
+[ext_resource type="Script" uid="uid://17lucu6l7knd" path="res://online_tournament_mode.gd" id="1_00f2i"]
+
+[node name="OnlineTournamentMode" type="VBoxContainer" unique_id=1458768672]
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("1_00f2i")

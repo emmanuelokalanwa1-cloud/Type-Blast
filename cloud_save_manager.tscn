@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://cr01uaictv0x6"]
+
+[ext_resource type="Script" uid="uid://gnybbyojjc8u" path="res://scripts/cloud_save_manager.gd" id="1_phuq4"]
+
+[node name="CloudSaveManager" type="Node" unique_id=987546776]
+script = ExtResource("1_phuq4")

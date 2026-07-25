@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#20243d"/>
+      <stop offset="1" stop-color="#12142a"/>
+    </linearGradient>
+    <linearGradient id="key" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5be3ff"/>
+      <stop offset="1" stop-color="#2ea8e0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- background -->
+  <rect width="128" height="128" rx="26" fill="url(#bg)"/>
+
+  <!-- falling letter trails (the "rain") -->
+  <rect x="24" y="16" width="7" height="20" rx="3.5" fill="#5be3ff" opacity="0.35"/>
+  <rect x="97" y="10" width="7" height="26" rx="3.5" fill="#ff6fae" opacity="0.35"/>
+  <rect x="60" y="8" width="7" height="16" rx="3.5" fill="#ffd166" opacity="0.35"/>
+
+  <!-- central key cap -->
+  <rect x="34" y="46" width="60" height="52" rx="12" fill="url(#key)"/>
+  <rect x="34" y="46" width="60" height="18" rx="12" fill="#ffffff" opacity="0.18"/>
+
+  <!-- letter on the key -->
+  <text x="64" y="84" text-anchor="middle" font-family="Arial, sans-serif"
+        font-size="34" font-weight="700" fill="#0d1420">A</text>
+
+  <!-- small accent dot (cursor / combo spark) -->
+  <circle cx="94" cy="98" r="6" fill="#ff6fae"/>
+</svg>

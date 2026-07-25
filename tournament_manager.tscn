@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://57epbrgjs1h4"]
+
+[ext_resource type="Script" uid="uid://dspk6377u53un" path="res://tournament_manager.gd" id="1_e6781"]
+
+[node name="TournamentManager" type="Node" unique_id=1146222040]
+script = ExtResource("1_e6781")

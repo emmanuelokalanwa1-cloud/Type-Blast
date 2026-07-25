@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://smay5rgpuc11"]
+
+[ext_resource type="Script" uid="uid://bc5monodqe4kp" path="res://auth_manager.gd" id="1_5pn48"]
+
+[node name="AuthManager" type="Node" unique_id=1254303530]
+script = ExtResource("1_5pn48")

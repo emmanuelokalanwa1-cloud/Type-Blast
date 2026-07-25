@@ -1,0 +1,19 @@
+[remap]
+
+importer="oggvorbisstr"
+type="AudioStreamOggVorbis"
+uid="uid://bayc2gwxp2jts"
+path="res://.godot/imported/Me and the Answer.ogg-b8998450fdc559ade685712243a3987a.oggvorbisstr"
+
+[deps]
+
+source_file="res://audio/Me and the Answer.ogg"
+dest_files=["res://.godot/imported/Me and the Answer.ogg-b8998450fdc559ade685712243a3987a.oggvorbisstr"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

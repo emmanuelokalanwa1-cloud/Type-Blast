@@ -1,0 +1,8 @@
+[gd_scene format=3 uid="uid://vaaw8kghfkox"]
+
+[ext_resource type="Script" uid="uid://dwilnp352op4t" path="res://login_screen.gd" id="1_wplbs"]
+
+[node name="LoginScreen" type="ColorRect" unique_id=403734512]
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("1_wplbs")

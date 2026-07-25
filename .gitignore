@@ -1,0 +1,15 @@
+# Godot
+.godot/
+.import/
+export.cfg
+export_credentials.cfg
+
+# Signing — NEVER commit these. Losing this file means you can never
+# update the app on Play Store under the same listing again, and if it
+# leaks, anyone can sign an app claiming to be an update to yours.
+*.keystore
+*.jks
+release.keystore
+
+# Android build output from CI
+build/

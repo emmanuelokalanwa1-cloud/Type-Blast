@@ -1,0 +1,19 @@
+[remap]
+
+importer="oggvorbisstr"
+type="AudioStreamOggVorbis"
+uid="uid://7gnb7wk4lkkx"
+path="res://.godot/imported/Thinking for my self.ogg-60642b3583176fddd96c6cdf168fb7bc.oggvorbisstr"
+
+[deps]
+
+source_file="res://audio/Thinking for my self.ogg"
+dest_files=["res://.godot/imported/Thinking for my self.ogg-60642b3583176fddd96c6cdf168fb7bc.oggvorbisstr"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

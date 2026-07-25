@@ -1,0 +1,760 @@
+{
+  "achievements": [
+    {
+      "id": "speed_20",
+      "category": "speed",
+      "title": "Speed 20",
+      "description": "Reach 20 WPM. Fingers are starting to outrun your eyes.",
+      "threshold": 20
+    },
+    {
+      "id": "speed_25",
+      "category": "speed",
+      "title": "Speed 25",
+      "description": "Reach 25 WPM. Fingers are starting to outrun your eyes.",
+      "threshold": 25
+    },
+    {
+      "id": "speed_30",
+      "category": "speed",
+      "title": "Speed 30",
+      "description": "Reach 30 WPM. Fingers are starting to outrun your eyes.",
+      "threshold": 30
+    },
+    {
+      "id": "speed_35",
+      "category": "speed",
+      "title": "Speed 35",
+      "description": "Reach 35 WPM. Fingers are starting to outrun your eyes.",
+      "threshold": 35
+    },
+    {
+      "id": "speed_40",
+      "category": "speed",
+      "title": "Speed 40",
+      "description": "Reach 40 WPM. Fingers are starting to outrun your eyes.",
+      "threshold": 40
+    },
+    {
+      "id": "speed_45",
+      "category": "speed",
+      "title": "Speed 45",
+      "description": "Reach 45 WPM. Fingers are starting to outrun your eyes.",
+      "threshold": 45
+    },
+    {
+      "id": "speed_50",
+      "category": "speed",
+      "title": "Speed 50",
+      "description": "Reach 50 WPM. Fingers are starting to outrun your eyes.",
+      "threshold": 50
+    },
+    {
+      "id": "speed_55",
+      "category": "speed",
+      "title": "Speed 55",
+      "description": "Reach 55 WPM. Fingers are starting to outrun your eyes.",
+      "threshold": 55
+    },
+    {
+      "id": "speed_60",
+      "category": "speed",
+      "title": "Speed 60",
+      "description": "Reach 60 WPM. Fingers are starting to outrun your eyes.",
+      "threshold": 60
+    },
+    {
+      "id": "speed_65",
+      "category": "speed",
+      "title": "Speed 65",
+      "description": "Reach 65 WPM. Fingers are starting to outrun your eyes.",
+      "threshold": 65
+    },
+    {
+      "id": "speed_70",
+      "category": "speed",
+      "title": "Speed 70",
+      "description": "Reach 70 WPM. Fingers are starting to outrun your eyes.",
+      "threshold": 70
+    },
+    {
+      "id": "speed_75",
+      "category": "speed",
+      "title": "Speed 75",
+      "description": "Reach 75 WPM. Fingers are starting to outrun your eyes.",
+      "threshold": 75
+    },
+    {
+      "id": "speed_80",
+      "category": "speed",
+      "title": "Speed 80",
+      "description": "Reach 80 WPM. Fingers are starting to outrun your eyes.",
+      "threshold": 80
+    },
+    {
+      "id": "speed_85",
+      "category": "speed",
+      "title": "Speed 85",
+      "description": "Reach 85 WPM. Fingers are starting to outrun your eyes.",
+      "threshold": 85
+    },
+    {
+      "id": "speed_90",
+      "category": "speed",
+      "title": "Speed 90",
+      "description": "Reach 90 WPM. Fingers are starting to outrun your eyes.",
+      "threshold": 90
+    },
+    {
+      "id": "speed_95",
+      "category": "speed",
+      "title": "Speed 95",
+      "description": "Reach 95 WPM. Fingers are starting to outrun your eyes.",
+      "threshold": 95
+    },
+    {
+      "id": "speed_100",
+      "category": "speed",
+      "title": "Speed 100",
+      "description": "Reach 100 WPM. Fingers are starting to outrun your eyes.",
+      "threshold": 100
+    },
+    {
+      "id": "speed_105",
+      "category": "speed",
+      "title": "Speed 105",
+      "description": "Reach 105 WPM. Fingers are starting to outrun your eyes.",
+      "threshold": 105
+    },
+    {
+      "id": "speed_110",
+      "category": "speed",
+      "title": "Speed 110",
+      "description": "Reach 110 WPM. Fingers are starting to outrun your eyes.",
+      "threshold": 110
+    },
+    {
+      "id": "speed_115",
+      "category": "speed",
+      "title": "Speed 115",
+      "description": "Reach 115 WPM. Fingers are starting to outrun your eyes.",
+      "threshold": 115
+    },
+    {
+      "id": "speed_120",
+      "category": "speed",
+      "title": "Speed 120",
+      "description": "Reach 120 WPM. Fingers are starting to outrun your eyes.",
+      "threshold": 120
+    },
+    {
+      "id": "accuracy_80",
+      "category": "accuracy",
+      "title": "Accuracy 80",
+      "description": "Reach 80 accuracy percent. Not a single stray keystroke in sight.",
+      "threshold": 80
+    },
+    {
+      "id": "accuracy_82",
+      "category": "accuracy",
+      "title": "Accuracy 82",
+      "description": "Reach 82 accuracy percent. Not a single stray keystroke in sight.",
+      "threshold": 82
+    },
+    {
+      "id": "accuracy_84",
+      "category": "accuracy",
+      "title": "Accuracy 84",
+      "description": "Reach 84 accuracy percent. Not a single stray keystroke in sight.",
+      "threshold": 84
+    },
+    {
+      "id": "accuracy_86",
+      "category": "accuracy",
+      "title": "Accuracy 86",
+      "description": "Reach 86 accuracy percent. Not a single stray keystroke in sight.",
+      "threshold": 86
+    },
+    {
+      "id": "accuracy_88",
+      "category": "accuracy",
+      "title": "Accuracy 88",
+      "description": "Reach 88 accuracy percent. Not a single stray keystroke in sight.",
+      "threshold": 88
+    },
+    {
+      "id": "accuracy_90",
+      "category": "accuracy",
+      "title": "Accuracy 90",
+      "description": "Reach 90 accuracy percent. Not a single stray keystroke in sight.",
+      "threshold": 90
+    },
+    {
+      "id": "accuracy_92",
+      "category": "accuracy",
+      "title": "Accuracy 92",
+      "description": "Reach 92 accuracy percent. Not a single stray keystroke in sight.",
+      "threshold": 92
+    },
+    {
+      "id": "accuracy_94",
+      "category": "accuracy",
+      "title": "Accuracy 94",
+      "description": "Reach 94 accuracy percent. Not a single stray keystroke in sight.",
+      "threshold": 94
+    },
+    {
+      "id": "accuracy_96",
+      "category": "accuracy",
+      "title": "Accuracy 96",
+      "description": "Reach 96 accuracy percent. Not a single stray keystroke in sight.",
+      "threshold": 96
+    },
+    {
+      "id": "accuracy_98",
+      "category": "accuracy",
+      "title": "Accuracy 98",
+      "description": "Reach 98 accuracy percent. Not a single stray keystroke in sight.",
+      "threshold": 98
+    },
+    {
+      "id": "accuracy_100",
+      "category": "accuracy",
+      "title": "Accuracy 100",
+      "description": "Reach 100 accuracy percent. Not a single stray keystroke in sight.",
+      "threshold": 100
+    },
+    {
+      "id": "endurance_50",
+      "category": "endurance",
+      "title": "Endurance 50",
+      "description": "Reach 50 words typed in a single run. Marathon typing, not a sprint.",
+      "threshold": 50
+    },
+    {
+      "id": "endurance_100",
+      "category": "endurance",
+      "title": "Endurance 100",
+      "description": "Reach 100 words typed in a single run. Marathon typing, not a sprint.",
+      "threshold": 100
+    },
+    {
+      "id": "endurance_250",
+      "category": "endurance",
+      "title": "Endurance 250",
+      "description": "Reach 250 words typed in a single run. Marathon typing, not a sprint.",
+      "threshold": 250
+    },
+    {
+      "id": "endurance_400",
+      "category": "endurance",
+      "title": "Endurance 400",
+      "description": "Reach 400 words typed in a single run. Marathon typing, not a sprint.",
+      "threshold": 400
+    },
+    {
+      "id": "endurance_500",
+      "category": "endurance",
+      "title": "Endurance 500",
+      "description": "Reach 500 words typed in a single run. Marathon typing, not a sprint.",
+      "threshold": 500
+    },
+    {
+      "id": "endurance_550",
+      "category": "endurance",
+      "title": "Endurance 550",
+      "description": "Reach 550 words typed in a single run. Marathon typing, not a sprint.",
+      "threshold": 550
+    },
+    {
+      "id": "endurance_600",
+      "category": "endurance",
+      "title": "Endurance 600",
+      "description": "Reach 600 words typed in a single run. Marathon typing, not a sprint.",
+      "threshold": 600
+    },
+    {
+      "id": "endurance_650",
+      "category": "endurance",
+      "title": "Endurance 650",
+      "description": "Reach 650 words typed in a single run. Marathon typing, not a sprint.",
+      "threshold": 650
+    },
+    {
+      "id": "endurance_750",
+      "category": "endurance",
+      "title": "Endurance 750",
+      "description": "Reach 750 words typed in a single run. Marathon typing, not a sprint.",
+      "threshold": 750
+    },
+    {
+      "id": "endurance_800",
+      "category": "endurance",
+      "title": "Endurance 800",
+      "description": "Reach 800 words typed in a single run. Marathon typing, not a sprint.",
+      "threshold": 800
+    },
+    {
+      "id": "endurance_850",
+      "category": "endurance",
+      "title": "Endurance 850",
+      "description": "Reach 850 words typed in a single run. Marathon typing, not a sprint.",
+      "threshold": 850
+    },
+    {
+      "id": "endurance_900",
+      "category": "endurance",
+      "title": "Endurance 900",
+      "description": "Reach 900 words typed in a single run. Marathon typing, not a sprint.",
+      "threshold": 900
+    },
+    {
+      "id": "endurance_1000",
+      "category": "endurance",
+      "title": "Endurance 1000",
+      "description": "Reach 1000 words typed in a single run. Marathon typing, not a sprint.",
+      "threshold": 1000
+    },
+    {
+      "id": "endurance_1150",
+      "category": "endurance",
+      "title": "Endurance 1150",
+      "description": "Reach 1150 words typed in a single run. Marathon typing, not a sprint.",
+      "threshold": 1150
+    },
+    {
+      "id": "endurance_1200",
+      "category": "endurance",
+      "title": "Endurance 1200",
+      "description": "Reach 1200 words typed in a single run. Marathon typing, not a sprint.",
+      "threshold": 1200
+    },
+    {
+      "id": "endurance_1250",
+      "category": "endurance",
+      "title": "Endurance 1250",
+      "description": "Reach 1250 words typed in a single run. Marathon typing, not a sprint.",
+      "threshold": 1250
+    },
+    {
+      "id": "endurance_1350",
+      "category": "endurance",
+      "title": "Endurance 1350",
+      "description": "Reach 1350 words typed in a single run. Marathon typing, not a sprint.",
+      "threshold": 1350
+    },
+    {
+      "id": "endurance_1400",
+      "category": "endurance",
+      "title": "Endurance 1400",
+      "description": "Reach 1400 words typed in a single run. Marathon typing, not a sprint.",
+      "threshold": 1400
+    },
+    {
+      "id": "endurance_1450",
+      "category": "endurance",
+      "title": "Endurance 1450",
+      "description": "Reach 1450 words typed in a single run. Marathon typing, not a sprint.",
+      "threshold": 1450
+    },
+    {
+      "id": "endurance_1550",
+      "category": "endurance",
+      "title": "Endurance 1550",
+      "description": "Reach 1550 words typed in a single run. Marathon typing, not a sprint.",
+      "threshold": 1550
+    },
+    {
+      "id": "endurance_1650",
+      "category": "endurance",
+      "title": "Endurance 1650",
+      "description": "Reach 1650 words typed in a single run. Marathon typing, not a sprint.",
+      "threshold": 1650
+    },
+    {
+      "id": "endurance_1750",
+      "category": "endurance",
+      "title": "Endurance 1750",
+      "description": "Reach 1750 words typed in a single run. Marathon typing, not a sprint.",
+      "threshold": 1750
+    },
+    {
+      "id": "endurance_1800",
+      "category": "endurance",
+      "title": "Endurance 1800",
+      "description": "Reach 1800 words typed in a single run. Marathon typing, not a sprint.",
+      "threshold": 1800
+    },
+    {
+      "id": "endurance_1850",
+      "category": "endurance",
+      "title": "Endurance 1850",
+      "description": "Reach 1850 words typed in a single run. Marathon typing, not a sprint.",
+      "threshold": 1850
+    },
+    {
+      "id": "endurance_1950",
+      "category": "endurance",
+      "title": "Endurance 1950",
+      "description": "Reach 1950 words typed in a single run. Marathon typing, not a sprint.",
+      "threshold": 1950
+    },
+    {
+      "id": "combo_5",
+      "category": "combo",
+      "title": "Combo 5",
+      "description": "Reach 5 combo streak. Momentum is its own reward.",
+      "threshold": 5
+    },
+    {
+      "id": "combo_10",
+      "category": "combo",
+      "title": "Combo 10",
+      "description": "Reach 10 combo streak. Momentum is its own reward.",
+      "threshold": 10
+    },
+    {
+      "id": "combo_15",
+      "category": "combo",
+      "title": "Combo 15",
+      "description": "Reach 15 combo streak. Momentum is its own reward.",
+      "threshold": 15
+    },
+    {
+      "id": "combo_20",
+      "category": "combo",
+      "title": "Combo 20",
+      "description": "Reach 20 combo streak. Momentum is its own reward.",
+      "threshold": 20
+    },
+    {
+      "id": "combo_25",
+      "category": "combo",
+      "title": "Combo 25",
+      "description": "Reach 25 combo streak. Momentum is its own reward.",
+      "threshold": 25
+    },
+    {
+      "id": "combo_45",
+      "category": "combo",
+      "title": "Combo 45",
+      "description": "Reach 45 combo streak. Momentum is its own reward.",
+      "threshold": 45
+    },
+    {
+      "id": "combo_70",
+      "category": "combo",
+      "title": "Combo 70",
+      "description": "Reach 70 combo streak. Momentum is its own reward.",
+      "threshold": 70
+    },
+    {
+      "id": "combo_75",
+      "category": "combo",
+      "title": "Combo 75",
+      "description": "Reach 75 combo streak. Momentum is its own reward.",
+      "threshold": 75
+    },
+    {
+      "id": "combo_80",
+      "category": "combo",
+      "title": "Combo 80",
+      "description": "Reach 80 combo streak. Momentum is its own reward.",
+      "threshold": 80
+    },
+    {
+      "id": "combo_90",
+      "category": "combo",
+      "title": "Combo 90",
+      "description": "Reach 90 combo streak. Momentum is its own reward.",
+      "threshold": 90
+    },
+    {
+      "id": "combo_95",
+      "category": "combo",
+      "title": "Combo 95",
+      "description": "Reach 95 combo streak. Momentum is its own reward.",
+      "threshold": 95
+    },
+    {
+      "id": "combo_105",
+      "category": "combo",
+      "title": "Combo 105",
+      "description": "Reach 105 combo streak. Momentum is its own reward.",
+      "threshold": 105
+    },
+    {
+      "id": "combo_110",
+      "category": "combo",
+      "title": "Combo 110",
+      "description": "Reach 110 combo streak. Momentum is its own reward.",
+      "threshold": 110
+    },
+    {
+      "id": "combo_115",
+      "category": "combo",
+      "title": "Combo 115",
+      "description": "Reach 115 combo streak. Momentum is its own reward.",
+      "threshold": 115
+    },
+    {
+      "id": "combo_120",
+      "category": "combo",
+      "title": "Combo 120",
+      "description": "Reach 120 combo streak. Momentum is its own reward.",
+      "threshold": 120
+    },
+    {
+      "id": "combo_125",
+      "category": "combo",
+      "title": "Combo 125",
+      "description": "Reach 125 combo streak. Momentum is its own reward.",
+      "threshold": 125
+    },
+    {
+      "id": "combo_130",
+      "category": "combo",
+      "title": "Combo 130",
+      "description": "Reach 130 combo streak. Momentum is its own reward.",
+      "threshold": 130
+    },
+    {
+      "id": "combo_135",
+      "category": "combo",
+      "title": "Combo 135",
+      "description": "Reach 135 combo streak. Momentum is its own reward.",
+      "threshold": 135
+    },
+    {
+      "id": "combo_140",
+      "category": "combo",
+      "title": "Combo 140",
+      "description": "Reach 140 combo streak. Momentum is its own reward.",
+      "threshold": 140
+    },
+    {
+      "id": "combo_155",
+      "category": "combo",
+      "title": "Combo 155",
+      "description": "Reach 155 combo streak. Momentum is its own reward.",
+      "threshold": 155
+    },
+    {
+      "id": "combo_160",
+      "category": "combo",
+      "title": "Combo 160",
+      "description": "Reach 160 combo streak. Momentum is its own reward.",
+      "threshold": 160
+    },
+    {
+      "id": "combo_170",
+      "category": "combo",
+      "title": "Combo 170",
+      "description": "Reach 170 combo streak. Momentum is its own reward.",
+      "threshold": 170
+    },
+    {
+      "id": "combo_175",
+      "category": "combo",
+      "title": "Combo 175",
+      "description": "Reach 175 combo streak. Momentum is its own reward.",
+      "threshold": 175
+    },
+    {
+      "id": "combo_190",
+      "category": "combo",
+      "title": "Combo 190",
+      "description": "Reach 190 combo streak. Momentum is its own reward.",
+      "threshold": 190
+    },
+    {
+      "id": "combo_195",
+      "category": "combo",
+      "title": "Combo 195",
+      "description": "Reach 195 combo streak. Momentum is its own reward.",
+      "threshold": 195
+    },
+    {
+      "id": "career_1",
+      "category": "career",
+      "title": "Career 1",
+      "description": "Reach 1 career rank reached. The Climb doesn't get easier, you get better.",
+      "threshold": 1
+    },
+    {
+      "id": "career_2",
+      "category": "career",
+      "title": "Career 2",
+      "description": "Reach 2 career rank reached. The Climb doesn't get easier, you get better.",
+      "threshold": 2
+    },
+    {
+      "id": "career_3",
+      "category": "career",
+      "title": "Career 3",
+      "description": "Reach 3 career rank reached. The Climb doesn't get easier, you get better.",
+      "threshold": 3
+    },
+    {
+      "id": "career_4",
+      "category": "career",
+      "title": "Career 4",
+      "description": "Reach 4 career rank reached. The Climb doesn't get easier, you get better.",
+      "threshold": 4
+    },
+    {
+      "id": "career_5",
+      "category": "career",
+      "title": "Career 5",
+      "description": "Reach 5 career rank reached. The Climb doesn't get easier, you get better.",
+      "threshold": 5
+    },
+    {
+      "id": "career_6",
+      "category": "career",
+      "title": "Career 6",
+      "description": "Reach 6 career rank reached. The Climb doesn't get easier, you get better.",
+      "threshold": 6
+    },
+    {
+      "id": "career_7",
+      "category": "career",
+      "title": "Career 7",
+      "description": "Reach 7 career rank reached. The Climb doesn't get easier, you get better.",
+      "threshold": 7
+    },
+    {
+      "id": "career_8",
+      "category": "career",
+      "title": "Career 8",
+      "description": "Reach 8 career rank reached. The Climb doesn't get easier, you get better.",
+      "threshold": 8
+    },
+    {
+      "id": "career_9",
+      "category": "career",
+      "title": "Career 9",
+      "description": "Reach 9 career rank reached. The Climb doesn't get easier, you get better.",
+      "threshold": 9
+    },
+    {
+      "id": "career_10",
+      "category": "career",
+      "title": "Career 10",
+      "description": "Reach 10 career rank reached. The Climb doesn't get easier, you get better.",
+      "threshold": 10
+    },
+    {
+      "id": "career_11",
+      "category": "career",
+      "title": "Career 11",
+      "description": "Reach 11 career rank reached. The Climb doesn't get easier, you get better.",
+      "threshold": 11
+    },
+    {
+      "id": "career_12",
+      "category": "career",
+      "title": "Career 12",
+      "description": "Reach 12 career rank reached. The Climb doesn't get easier, you get better.",
+      "threshold": 12
+    },
+    {
+      "id": "career_13",
+      "category": "career",
+      "title": "Career 13",
+      "description": "Reach 13 career rank reached. The Climb doesn't get easier, you get better.",
+      "threshold": 13
+    },
+    {
+      "id": "career_14",
+      "category": "career",
+      "title": "Career 14",
+      "description": "Reach 14 career rank reached. The Climb doesn't get easier, you get better.",
+      "threshold": 14
+    },
+    {
+      "id": "career_15",
+      "category": "career",
+      "title": "Career 15",
+      "description": "Reach 15 career rank reached. The Climb doesn't get easier, you get better.",
+      "threshold": 15
+    },
+    {
+      "id": "career_16",
+      "category": "career",
+      "title": "Career 16",
+      "description": "Reach 16 career rank reached. The Climb doesn't get easier, you get better.",
+      "threshold": 16
+    },
+    {
+      "id": "career_17",
+      "category": "career",
+      "title": "Career 17",
+      "description": "Reach 17 career rank reached. The Climb doesn't get easier, you get better.",
+      "threshold": 17
+    },
+    {
+      "id": "career_18",
+      "category": "career",
+      "title": "Career 18",
+      "description": "Reach 18 career rank reached. The Climb doesn't get easier, you get better.",
+      "threshold": 18
+    },
+    {
+      "id": "career_19",
+      "category": "career",
+      "title": "Career 19",
+      "description": "Reach 19 career rank reached. The Climb doesn't get easier, you get better.",
+      "threshold": 19
+    },
+    {
+      "id": "career_20",
+      "category": "career",
+      "title": "Career 20",
+      "description": "Reach 20 career rank reached. The Climb doesn't get easier, you get better.",
+      "threshold": 20
+    },
+    {
+      "id": "collection_1",
+      "category": "collection",
+      "title": "Collection 1",
+      "description": "Reach 1 themes played. A little variety keeps the keyboard honest.",
+      "threshold": 1
+    },
+    {
+      "id": "collection_2",
+      "category": "collection",
+      "title": "Collection 2",
+      "description": "Reach 2 themes played. A little variety keeps the keyboard honest.",
+      "threshold": 2
+    },
+    {
+      "id": "collection_3",
+      "category": "collection",
+      "title": "Collection 3",
+      "description": "Reach 3 themes played. A little variety keeps the keyboard honest.",
+      "threshold": 3
+    },
+    {
+      "id": "collection_4",
+      "category": "collection",
+      "title": "Collection 4",
+      "description": "Reach 4 themes played. A little variety keeps the keyboard honest.",
+      "threshold": 4
+    },
+    {
+      "id": "collection_5",
+      "category": "collection",
+      "title": "Collection 5",
+      "description": "Reach 5 themes played. A little variety keeps the keyboard honest.",
+      "threshold": 5
+    },
+    {
+      "id": "collection_6",
+      "category": "collection",
+      "title": "Collection 6",
+      "description": "Reach 6 themes played. A little variety keeps the keyboard honest.",
+      "threshold": 6
+    }
+  ]
+}

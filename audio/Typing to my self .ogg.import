@@ -1,0 +1,19 @@
+[remap]
+
+importer="oggvorbisstr"
+type="AudioStreamOggVorbis"
+uid="uid://c50smm8yxb0qs"
+path="res://.godot/imported/Typing to my self .ogg-9802526d57a5d9aa3530ad33d93b787a.oggvorbisstr"
+
+[deps]
+
+source_file="res://audio/Typing to my self .ogg"
+dest_files=["res://.godot/imported/Typing to my self .ogg-9802526d57a5d9aa3530ad33d93b787a.oggvorbisstr"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4
