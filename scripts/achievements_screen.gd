@@ -133,8 +133,7 @@ func _add_trophy_banner(parent: VBoxContainer) -> void:
 
 	var rect = TextureRect.new()
 	rect.texture = tex
-	rect.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
-	rect.stretch_mode = TextureRect.STRETCH_SCALE
+rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED	rect.stretch_mode = TextureRect.STRETCH_SCALE
 	rect.custom_minimum_size = Vector2(0, 110)
 	rect.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	frame.add_child(rect)
