@@ -11,8 +11,7 @@ env:
   GODOT_VERSION: 4.7-stable
   GODOT_TEMPLATE_DIR: 4.7.stable   # local template folder Godot expects (dot before "stable")
   EXPORT_PRESET: Android
-  EXPORT_NAME: typeblast-release.aab
-
+  EEXPORT_NAME: typeblast-release.apk
 jobs:
   build:
     runs-on: ubuntu-latest
