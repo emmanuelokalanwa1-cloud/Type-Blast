@@ -183,10 +183,11 @@ func _ready() -> void:
 	_dbg_label.add_theme_color_override("font_color", Color(1, 1, 0))
 	_dbg_label.position = Vector2(10, 200)
 	_dbg_label.z_index = 999
-	call_deferred("add_child", _dbg_label)
+	_dbg_label.text = "OK: script started"
+	add_child(_dbg_label)
 	var _dbg := func(step: String):
 		_dbg_label.text = "OK: " + step
-		print("STARTUP STEP: ", step)
+		
 
 	# Mobile support first: everything else (input box placement, HUD
 	# positions) may want to know is_touch / safe-area insets right away.
