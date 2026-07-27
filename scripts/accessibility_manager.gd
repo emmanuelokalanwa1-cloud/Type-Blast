@@ -39,6 +39,8 @@ shader_type canvas_item;
 uniform int cb_mode : hint_range(0, 3) = 0;
 uniform float strength : hint_range(0.0, 1.0) = 0.6;
 
+uniform sampler2D SCREEN_TEXTURE : hint_screen_texture, filter_linear_mipmap;
+
 void fragment() {
 	vec4 c = texture(SCREEN_TEXTURE, SCREEN_UV);
 	vec3 rgb = c.rgb;
@@ -138,6 +140,8 @@ func _apply_high_contrast(on: bool) -> void:
 	if _theme == null:
 		return
 	for control_type in TEXT_TYPES:
+		if not ClassDB.class_exists(control_type):
+			continue
 		if on:
 			_theme.set_color("font_outline_color", control_type, Color(0, 0, 0, 0.9))
 			_theme.set_constant("outline_size", control_type, 3)
@@ -164,6 +168,8 @@ func _apply_dyslexia_spacing(on: bool) -> void:
 	if _theme == null:
 		return
 	for control_type in TEXT_TYPES:
+		if not ClassDB.class_exists(control_type):
+			continue
 		if on:
 			_theme.set_constant("font_spacing_glyph", control_type, 3)
 			_theme.set_constant("font_spacing_space", control_type, 6)
