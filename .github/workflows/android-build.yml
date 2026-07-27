@@ -11,8 +11,7 @@ env:
   GODOT_VERSION: 4.7-stable
   GODOT_TEMPLATE_DIR: 4.7.stable   # local template folder Godot expects (dot before "stable")
   EXPORT_PRESET: Android
-  EXPORT_NAME: typeblast-release.aab
-
+  EXPORT_NAME: typeblast-release.apk
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -67,9 +66,10 @@ jobs:
       - name: Decode release keystore
         run: |
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/release.keystore"
+          keytool -list -keystore "$RUNNER_TEMP/release.keystore" -storepass "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}"
 
       - name: Import project resources
-        run: "$GODOT_BIN" --headless --import
+        run: $GODOT_BIN --headless --import
 
       - name: Install Android build template + export signed AAB
         env:
