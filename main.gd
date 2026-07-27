@@ -177,18 +177,6 @@ var streak_relief_tier := 0       # 0 = inactive, 1/2/3 = which tier is currentl
 func _ready() -> void:
 	randomize()
 
-	var _dbg_label := Label.new()
-	_dbg_label.name = "DebugStepLabel"
-	_dbg_label.add_theme_font_size_override("font_size", 16)
-	_dbg_label.add_theme_color_override("font_color", Color(1, 1, 0))
-	_dbg_label.position = Vector2(10, 200)
-	_dbg_label.z_index = 999
-	_dbg_label.text = "OK: script started"
-	add_child(_dbg_label)
-	var _dbg := func(step: String):
-		_dbg_label.text = "OK: " + step
-		
-
 	# Mobile support first: everything else (input box placement, HUD
 	# positions) may want to know is_touch / safe-area insets right away.
 	mobile_support = preload("res://scenes/mobile_support.tscn").instantiate() as MobileSupport
@@ -196,44 +184,34 @@ func _ready() -> void:
 	mobile_support.back_pressed.connect(_on_back_pressed)
 	mobile_support.app_focus_lost.connect(_on_app_focus_lost)
 	mobile_support.viewport_resized.connect(_on_viewport_resized)
-    _dbg.call("mobile_support")
-
 
 	game_state = preload("res://scenes/game_state.tscn").instantiate() as GameState
 	add_child(game_state)
-     _dbg.call("game_state")
 
 	monetization = preload("res://scenes/monetization_manager.tscn").instantiate() as MonetizationManager
 	add_child(monetization)
 	monetization.init_ads()
-    _dbg.call("monetization")
 
 	cloud_save = preload("res://cloud_save_manager.tscn").instantiate() as CloudSaveManager
 	add_child(cloud_save)
-    _dbg.call("cloud_save")
 
 	auth = preload("res://auth_manager.tscn").instantiate() as AuthManager
 	add_child(auth)
-    _dbg.call("auth")
 
 	accessibility_manager = preload("res://scenes/accessibility_manager.tscn").instantiate() as AccessibilityManager
 	add_child(accessibility_manager)
 	accessibility_manager.setup(game_state)
-    _dbg.call("accessibility_manager")
 
 	word_manager = preload("res://scenes/word_manager.tscn").instantiate() as WordManager
 	add_child(word_manager)
 	word_manager.setup(word_label_template, self, game_state)
-    _dbg.call("word_manager")
 
 	powerup_system = preload("res://scenes/powerup_system.tscn").instantiate() as PowerupSystem
 	add_child(powerup_system)
 	powerup_system.setup(game_state)
-    _dbg.call("powerup_system")
 
 	audio = preload("res://scenes/audio_manager.tscn").instantiate() as AudioManager
 	add_child(audio)
-    _dbg.call("audio")
 	
 	# Pack your gameplay tracks into an array for the new playlist system
 	var gameplay_tracks: Array[AudioStreamPlayer] = []
@@ -249,12 +227,10 @@ func _ready() -> void:
 	ui_hud = preload("res://scenes/ui_hud.tscn").instantiate() as UiHud
 	add_child(ui_hud)
 	ui_hud.setup(self, game_state, score_label, time_label, lives_label, highscore_label, combo_label)
-    _dbg.call("ui_hud")
 
 	stats_screen = preload("res://scenes/stats_screen.tscn").instantiate() as StatsScreen
 	add_child(stats_screen)
-	stats_screen.setup(result_panel, final_score_label, coin_label, game_state, audio) 
-    _dbg.call("stats_screen")
+	stats_screen.setup(result_panel, final_score_label, coin_label, game_state, audio)
 
 	stats_screen.restart_pressed.connect(_on_restart_pressed)
 	stats_screen.menu_pressed.connect(_on_menu_pressed)
@@ -265,7 +241,6 @@ func _ready() -> void:
 	typing_controller.setup(input_box, word_manager, func(): return game_state.running and not game_state.is_paused and not is_transitioning and not (is_instance_valid(tutorial_overlay) and tutorial_overlay.visible))
 	typing_controller.word_matched.connect(_on_word_matched)
 	typing_controller.input_invalid.connect(_on_input_invalid)
-    _dbg.call("typing_controller")
 
 	# NEW: keystroke sound now fires exactly once per real key you press or
 	# delete, instead of drifting off on its own separate trigger.
