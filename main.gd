@@ -1,22 +1,5 @@
 extends Control
 
-## === TEMP DEBUG CHECKPOINT BUILD ===
-## Shows the last successfully-reached init step on screen (top-left, yellow)
-## and prints it too. Remove this whole block once the crash is found.
-var _dbg_label: Label
-
-func _dbg(step: String) -> void:
-	if not is_instance_valid(_dbg_label):
-		_dbg_label = Label.new()
-		_dbg_label.add_theme_color_override("font_color", Color.YELLOW)
-		_dbg_label.add_theme_font_size_override("font_size", 20)
-		_dbg_label.position = Vector2(10, 130)
-		_dbg_label.z_index = 999
-		add_child(_dbg_label)
-	_dbg_label.text = "OK: " + step
-	print("[DBG CHECKPOINT] ", step)
-## === END TEMP DEBUG CHECKPOINT BUILD ===
-
 ## Main no longer owns gameplay logic itself — it just builds the
 ## sub-systems (each its own node/script under res://scripts/), wires their
 ## signals together, and drives the per-frame loop (spawning, falling,
@@ -201,39 +184,31 @@ func _ready() -> void:
 	mobile_support.back_pressed.connect(_on_back_pressed)
 	mobile_support.app_focus_lost.connect(_on_app_focus_lost)
 	mobile_support.viewport_resized.connect(_on_viewport_resized)
-	_dbg("mobile_support")
 
 	game_state = preload("res://scenes/game_state.tscn").instantiate() as GameState
 	add_child(game_state)
-	_dbg("game_state")
 
 	monetization = preload("res://scenes/monetization_manager.tscn").instantiate() as MonetizationManager
 	add_child(monetization)
 	monetization.init_ads()
-	_dbg("monetization")
 
 	cloud_save = preload("res://cloud_save_manager.tscn").instantiate() as CloudSaveManager
 	add_child(cloud_save)
-	_dbg("cloud_save")
 
 	auth = preload("res://auth_manager.tscn").instantiate() as AuthManager
 	add_child(auth)
-	_dbg("auth")
 
 	accessibility_manager = preload("res://scenes/accessibility_manager.tscn").instantiate() as AccessibilityManager
 	add_child(accessibility_manager)
 	accessibility_manager.setup(game_state)
-	_dbg("accessibility_manager")
 
 	word_manager = preload("res://scenes/word_manager.tscn").instantiate() as WordManager
 	add_child(word_manager)
 	word_manager.setup(word_label_template, self, game_state)
-	_dbg("word_manager")
 
 	powerup_system = preload("res://scenes/powerup_system.tscn").instantiate() as PowerupSystem
 	add_child(powerup_system)
 	powerup_system.setup(game_state)
-	_dbg("powerup_system")
 
 	audio = preload("res://scenes/audio_manager.tscn").instantiate() as AudioManager
 	add_child(audio)
@@ -248,12 +223,10 @@ func _ready() -> void:
 	# to support multiple menu tracks expected by the updated AudioManager setup.
 	audio.setup(game_state, [music_snd], gameplay_tracks, success_snd, error_snd, keystroke_snd,
 		click_snd, notification_snd, levelup_sting_snd, whoosh_snd, gameover_voice_snd)
-	_dbg("audio_setup")
 
 	ui_hud = preload("res://scenes/ui_hud.tscn").instantiate() as UiHud
 	add_child(ui_hud)
 	ui_hud.setup(self, game_state, score_label, time_label, lives_label, highscore_label, combo_label)
-	_dbg("ui_hud")
 
 	stats_screen = preload("res://scenes/stats_screen.tscn").instantiate() as StatsScreen
 	add_child(stats_screen)
@@ -262,14 +235,12 @@ func _ready() -> void:
 	stats_screen.restart_pressed.connect(_on_restart_pressed)
 	stats_screen.menu_pressed.connect(_on_menu_pressed)
 	stats_screen.quit_pressed.connect(_on_quit_to_menu)
-	_dbg("stats_screen")
 
 	typing_controller = preload("res://scenes/typing_controller.tscn").instantiate() as TypingController
 	add_child(typing_controller)
 	typing_controller.setup(input_box, word_manager, func(): return game_state.running and not game_state.is_paused and not is_transitioning and not (is_instance_valid(tutorial_overlay) and tutorial_overlay.visible))
 	typing_controller.word_matched.connect(_on_word_matched)
 	typing_controller.input_invalid.connect(_on_input_invalid)
-	_dbg("typing_controller")
 
 	# NEW: keystroke sound now fires exactly once per real key you press or
 	# delete, instead of drifting off on its own separate trigger.
@@ -280,11 +251,9 @@ func _ready() -> void:
 	typing_controller.key_deleted.connect(func(): audio.play_keystroke(false))
 
 	word_manager.word_missed.connect(_on_word_missed)
-	_dbg("word_manager_signals")
 
 	game_state.level_up.connect(_on_level_up)
 	game_state.game_ended.connect(_on_game_ended)
-	_dbg("game_state_signals")
 
 	if music_snd:
 		music_snd.finished.connect(_on_music_finished)
@@ -301,7 +270,6 @@ func _ready() -> void:
 	else:
 		input_box.position.y = get_viewport_rect().size.y - 120
 	original_input_pos_y = input_box.position.y
-	_dbg("ui_properties")
 
 	restart_button.text = "RESTART"
 	restart_button.pressed.connect(_on_restart_pressed)
@@ -309,7 +277,6 @@ func _ready() -> void:
 	if score_button: score_button.pressed.connect(_on_score_view_pressed)
 
 	_setup_pause_button()
-	_dbg("pause_button_setup")
 
 	mobile_support.apply_safe_area_top([
 		score_label, time_label, lives_label, combo_label, highscore_label,
@@ -321,68 +288,56 @@ func _ready() -> void:
 	pause_menu.resume_pressed.connect(_on_resume_pressed)
 	pause_menu.restart_pressed.connect(_on_pause_restart_pressed)
 	pause_menu.quit_pressed.connect(_on_quit_to_menu)
-	_dbg("pause_menu")
 
 	difficulty_menu = preload("res://scenes/difficulty_menu.tscn").instantiate() as DifficultyMenu
 	difficulty_menu.setup(self, game_state)
 	difficulty_menu.start_pressed.connect(_on_difficulty_start)
 	difficulty_menu.close()
-	_dbg("difficulty_menu")
 
 	mission_manager = preload("res://scenes/mission_manager.tscn").instantiate() as MissionManager
 	add_child(mission_manager)
 	mission_manager.setup(game_state)
-	_dbg("mission_manager")
 
 	missions_screen = preload("res://scenes/missions_screen.tscn").instantiate() as MissionsScreen
 	missions_screen.setup(self, game_state, mission_manager)
 	difficulty_menu.missions_pressed.connect(func(): audio.play_whoosh(); missions_screen.open())
 	missions_screen.closed.connect(func(): audio.play_ui_click())
-	_dbg("missions_screen")
 
 	career_manager = preload("res://scenes/career_manager.tscn").instantiate() as CareerManager
 	add_child(career_manager)
 	career_manager.setup(game_state, mission_manager)
-	_dbg("career_manager")
 
 	career_screen = preload("res://scenes/career_screen.tscn").instantiate() as CareerScreen
 	career_screen.setup(self, game_state, mission_manager, career_manager)
 	career_screen.rank_selected.connect(_on_career_rank_selected)
 	difficulty_menu.career_pressed.connect(func(): audio.play_whoosh(); career_screen.open())
 	career_screen.closed.connect(func(): audio.play_ui_click())
-	_dbg("career_screen")
 
 	achievements_screen = preload("res://scenes/achievements_screen.tscn").instantiate() as AchievementsScreen
 	achievements_screen.setup(self, game_state)
 	difficulty_menu.achievements_pressed.connect(func(): audio.play_whoosh(); achievements_screen.open())
 	achievements_screen.closed.connect(func(): audio.play_ui_click())
-	_dbg("achievements_screen")
 
 	sentence_mode_screen = preload("res://scenes/sentence_mode_screen.tscn").instantiate() as SentenceModeScreen
 	sentence_mode_screen.setup(self, game_state, mission_manager)
 	difficulty_menu.sentence_mode_pressed.connect(func(): audio.play_whoosh(); sentence_mode_screen.open())
 	sentence_mode_screen.closed.connect(func(): audio.play_ui_click())
-	_dbg("sentence_mode_screen")
 
 	dictation_screen = preload("res://scenes/dictation_screen.tscn").instantiate() as DictationScreen
 	dictation_screen.setup(self, game_state)
 	dictation_screen.closed.connect(func(): audio.play_ui_click())
-	_dbg("dictation_screen")
 
 	lan_manager = preload("res://scenes/lan_multiplayer_manager.tscn").instantiate() as LanMultiplayerManager
 	lan_manager.name = "LanMultiplayerManager"
 	add_child(lan_manager)
-	_dbg("lan_manager")
 
 	internet_manager = preload("res://scenes/internet_multiplayer_manager.tscn").instantiate() as InternetMultiplayerManager
 	internet_manager.name = "InternetMultiplayerManager"
 	add_child(internet_manager)
-	_dbg("internet_manager")
 
 	tournament_manager = preload("res://tournament_manager.tscn").instantiate() as TournamentManager
 	tournament_manager.name = "TournamentManager"
 	add_child(tournament_manager)
-	_dbg("tournament_manager")
 
 	more_screen = preload("res://scenes/more_screen.tscn").instantiate() as MoreScreen
 	more_screen.setup(self, game_state, audio, mission_manager, lan_manager, internet_manager, monetization, cloud_save, tournament_manager, auth)
@@ -411,15 +366,12 @@ func _ready() -> void:
 	big_word_banner = preload("res://scenes/big_word_banner.tscn").instantiate() as BigWordBanner
 	add_child(big_word_banner)
 	big_word_banner.setup(typing_controller)
-	_dbg("big_word_banner")
 	round_start_announcer = preload("res://scenes/round_start_announcer.tscn").instantiate() as RoundStartAnnouncer
 	add_child(round_start_announcer)
 	round_start_announcer.setup(game_state)
-	_dbg("round_start_announcer")
 	adaptive_difficulty = preload("res://scenes/adaptive_difficulty.tscn").instantiate() as AdaptiveDifficulty
 	add_child(adaptive_difficulty)
 	adaptive_difficulty.setup(game_state, typing_controller, word_manager)
-	_dbg("adaptive_difficulty")
 
 	game_state.ui_style_changed.connect(_on_ui_style_changed)
 
