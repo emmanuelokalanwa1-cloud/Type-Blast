@@ -1,139 +1,130 @@
-class_name TypingController
+class_name MobileSupport
 extends Node
 
+## Centralizes everything the game needs to behave well on a phone/tablet
+## instead of "the desktop build happens to also run on Android":
+##
+##  1. Detects touch/mobile at runtime (is_touch) so callers can branch.
+##  2. Detects current orientation (is_portrait) and reports changes, instead
+##     of forcing the device into one orientation — some players will hold
+##     it sideways and the game shouldn't fight them.
+##  3. Routes the Android hardware Back button to pause instead of doing
+##     nothing (default) or fighting with ui_cancel.
+##  4. Auto-pauses when the app loses focus (phone call, app switch, screen
+##     lock) and reports when it regains focus, so the timer/spawns don't
+##     silently burn through while the player isn't looking.
+##  5. Centralizes on-screen keyboard show/hide so it's called from exactly
+##     one place instead of scattered DisplayServer calls.
+##  6. Provides safe-area insets (notches / punch-holes / gesture bars) and a
+##     helper to nudge top-anchored HUD elements clear of them — computed
+##     fresh each time, so it's correct in either orientation.
+##  7. A guarded haptic-feedback wrapper (no-ops on desktop).
+##
+## Nothing here assumes a specific scene layout — it's handed nodes/values
+## by main.gd rather than reaching into $Paths itself, so it can't break if
+## the scene tree changes shape.
 
-signal word_matched(label: Label)
-signal input_invalid()
-@warning_ignore("unused_signal")
-signal input_progress(is_valid_prefix: bool, matched_color: Color)
-signal key_typed(letter: String, is_valid: bool)     # fires once per character actually typed
-signal key_deleted()                  # fires once per character actually removed
-signal word_progress(ratio: float)    # 0.0-1.0 how far into the closest word you are
-signal repeated_mistake()             # same wrong char typed 3+ times in a row
+signal back_pressed        # Android/back gesture, only when nothing else claimed it
+signal app_focus_lost      # OS took focus away (call, switch, lock)
+signal app_focus_regained
+signal viewport_resized     # canvas size changed (e.g. mobile browser keyboard opening)
+signal orientation_changed(is_portrait: bool)  # device was rotated
 
-var _input_box: LineEdit
-var _word_manager: WordManager
-var _is_active_check: Callable # returns bool: should we accept input right now?
-var _last_text := "" # tracks previous text so we can tell keystrokes from programmatic clears
-var _was_active := true
-var _last_invalid_char := ""
-var _repeated_invalid_count := 0
+var is_touch := false
+var is_web := false
+var is_portrait := true
+var _keyboard_visible := false
 
-func setup(input_box: LineEdit, word_manager: WordManager, is_active_check: Callable) -> void:
-	_input_box = input_box
-	_word_manager = word_manager
-	_is_active_check = is_active_check
-	_input_box.text_changed.connect(_on_text_changed)
-	_input_box.text_submitted.connect(_on_text_submitted)
+func _ready() -> void:
+	is_touch = DisplayServer.is_touchscreen_available()
+	is_web = OS.has_feature("web")
+	is_portrait = _compute_is_portrait()
 
-func _on_text_submitted(_t: String) -> void:
-	_on_text_changed(_input_box.text)
+	# Locked to portrait: the game's UI is laid out for a portrait canvas
+	# (720x1280). Free rotation used to be allowed here, but that let the
+	# same portrait layout get stretched into a landscape frame whenever a
+	# player tilted their phone or had landscape as their default, breaking
+	# the HUD and falling-word layout. Keep-awake is unrelated to
+	# orientation and still applies.
+	if not is_web:
+		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_PORTRAIT)
+		DisplayServer.screen_set_keep_on(true)
 
-func _on_text_changed(new_text: String) -> void:
-	var active = _is_active_check.call()
+	get_viewport().size_changed.connect(_on_resized)
 
-	# 4. If typing just became inactive mid-word (pause opened, game ended),
-	# clear the box instead of leaving stale text sitting there.
-	if _was_active and not active and new_text != "":
-		_last_text = ""
-		_input_box.call_deferred("set_text", "")
-		_was_active = active
+func _on_resized() -> void:
+	viewport_resized.emit()
+	var now_portrait := _compute_is_portrait()
+	if now_portrait != is_portrait:
+		is_portrait = now_portrait
+		orientation_changed.emit(is_portrait)
+
+func _compute_is_portrait() -> bool:
+	var size := get_viewport().get_visible_rect().size
+	return size.y >= size.x
+
+func _notification(what: int) -> void:
+	match what:
+		NOTIFICATION_WM_GO_BACK_REQUEST:
+			back_pressed.emit()
+		NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_APPLICATION_PAUSED:
+			app_focus_lost.emit()
+		NOTIFICATION_APPLICATION_FOCUS_IN, NOTIFICATION_APPLICATION_RESUMED:
+			app_focus_regained.emit()
+
+## --- On-screen keyboard -----------------------------------------------
+## Always route through here (instead of calling DisplayServer directly)
+## so keyboard state can't drift out of sync with what's on screen.
+func show_keyboard(existing_text: String = "") -> void:
+	if not is_touch or _keyboard_visible:
 		return
-	_was_active = active
+	DisplayServer.virtual_keyboard_show(existing_text)
+	_keyboard_visible = true
 
-	if not active:
-		_last_text = new_text
+func hide_keyboard() -> void:
+	if not is_touch:
 		return
+	if _keyboard_visible:
+		DisplayServer.virtual_keyboard_hide()
+		_keyboard_visible = false
 
-	# 1. Strip anything that isn't a letter so stray punctuation/number taps
-	# don't corrupt prefix matching (and re-sync the box if we changed it).
-	var letters_only := ""
-	for c in new_text:
-		if c.to_upper() != c.to_lower(): # is alphabetic
-			letters_only += c
-	if letters_only != new_text:
-		new_text = letters_only
-		_input_box.call_deferred("set_text", new_text)
-		_input_box.call_deferred("caret_column", new_text.length())
+## --- Safe area -----------------------------------------------------------
+## Returns how many project-space pixels are unsafe on each edge (notches,
+## camera cutouts, gesture bars), scaled from screen space into the game's
+## stretched canvas space so callers can just add these to their offsets.
+func get_safe_area_insets() -> Dictionary:
+	var empty := {"left": 0.0, "top": 0.0, "right": 0.0, "bottom": 0.0}
+	if not is_touch:
+		return empty
 
-	if new_text == "":
-		if _last_text != "":
-			key_deleted.emit()
-		_last_text = new_text
+	var screen_size := DisplayServer.screen_get_size()
+	var safe_area := DisplayServer.get_display_safe_area()
+	if screen_size.x <= 0 or screen_size.y <= 0:
+		return empty
+
+	var canvas_size := get_viewport().get_visible_rect().size
+	var scale_x := canvas_size.x / float(screen_size.x)
+	var scale_y := canvas_size.y / float(screen_size.y)
+
+	return {
+		"left": safe_area.position.x * scale_x,
+		"top": safe_area.position.y * scale_y,
+		"right": (screen_size.x - (safe_area.position.x + safe_area.size.x)) * scale_x,
+		"bottom": (screen_size.y - (safe_area.position.y + safe_area.size.y)) * scale_y,
+	}
+
+## Nudges a list of top-anchored Controls down by the top safe-area inset
+## (e.g. a camera cutout eating into the status bar) so nothing gets
+## clipped behind it. Safe to call on desktop — it's a no-op there.
+func apply_safe_area_top(nodes: Array) -> void:
+	var insets := get_safe_area_insets()
+	if insets.top <= 0.0:
 		return
+	for n in nodes:
+		if is_instance_valid(n):
+			n.position.y += insets.top
 
-	var upper_text = new_text.to_upper()
-
-	var found_match := false
-	var match_color := Color.WHITE
-	var closest_word := ""
-	for label in _word_manager.active_words:
-		if is_instance_valid(label):
-			var word_target = String(label.get_meta("word"))
-			if word_target.begins_with(upper_text):
-				match_color = label.modulate
-				found_match = true
-				closest_word = word_target
-				break
-	if found_match:
-		_input_box.add_theme_color_override("font_color", match_color)
-	else:
-		_input_box.add_theme_color_override("font_color", Color.RED)
-
-	# 2. Report progress through the closest matching word.
-	if found_match and closest_word.length() > 0:
-		word_progress.emit(float(upper_text.length()) / float(closest_word.length()))
-
-	# Emit one key_typed()/key_deleted() per actual character difference vs
-	# the last known text, so a fast typist (or a paste) still gets one
-	# sound per character rather than one sound for the whole event.
-	var char_delta = new_text.length() - _last_text.length()
-	if char_delta > 0:
-		# Slice out just the newly-added letters (usually 1, but a paste
-		# or very fast burst can add more than one at once) so each gets
-		# its own key_typed emission with the letter that was actually typed.
-		var added_chars := upper_text.substr(upper_text.length() - char_delta, char_delta)
-		for i in range(char_delta):
-			var ch := added_chars.substr(i, 1) if i < added_chars.length() else ""
-			key_typed.emit(ch, found_match)
-	elif char_delta < 0:
-		for i in range(-char_delta):
-			key_deleted.emit()
-
-	# 5. Track repeated wrong characters (same last letter, still invalid).
-	var last_char = upper_text.substr(upper_text.length() - 1, 1) if upper_text.length() > 0 else ""
-	if not found_match and last_char == _last_invalid_char:
-		_repeated_invalid_count += 1
-		if _repeated_invalid_count >= 3:
-			repeated_mistake.emit()
-			_repeated_invalid_count = 0
-	elif not found_match:
-		_last_invalid_char = last_char
-		_repeated_invalid_count = 1
-	else:
-		_last_invalid_char = ""
-		_repeated_invalid_count = 0
-
-	if not _word_manager.find_prefix_match(upper_text):
-		input_invalid.emit()
-		_last_text = "" # we're about to clear it ourselves - not a real backspace
-		_input_box.call_deferred("set_text", "")
-		return
-
-	var matched_label = _word_manager.find_exact_match(upper_text)
-	if matched_label:
-		_last_text = "" # same as above: this clear is programmatic, not a keystroke
-		_input_box.call_deferred("set_text", "")
-		word_matched.emit(matched_label)
-		return
-
-	_last_text = new_text
-
-# 3. Public reset for callers (main.gd) to invoke when pausing/opening a
-# menu, so no leftover state carries into the next run.
-func reset() -> void:
-	_last_text = ""
-	_last_invalid_char = ""
-	_repeated_invalid_count = 0
-	if _input_box:
-		_input_box.call_deferred("set_text", "")
+## --- Haptics ---------------------------------------------------------
+func vibrate(duration_ms: int = 20) -> void:
+	if is_touch:
+		Input.vibrate_handheld(duration_ms)
