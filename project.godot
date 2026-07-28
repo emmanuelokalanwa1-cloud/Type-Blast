@@ -14,6 +14,12 @@ config/name="Type Blast"
 run/main_scene="uid://b4jj1qcvuvnp1"
 config/features=PackedStringArray("4.7", "Forward Plus")
 config/icon="res://assets/icons/app/app_icon_1024.png"
+boot_splash/show_image=true
+boot_splash/image="res://assets/icons/app/app_icon_1024.png"
+boot_splash/fullsize=false
+boot_splash/use_filter=true
+boot_splash/bg_color=Color(0.06, 0.06, 0.08, 1)
+boot_splash/minimum_display_time=0
 
 [editor_plugins]
 
