@@ -238,7 +238,7 @@ func _ready() -> void:
 
 	typing_controller = preload("res://scenes/typing_controller.tscn").instantiate() as TypingController
 	add_child(typing_controller)
-	typing_controller.setup(input_box, word_manager, func(): return game_state.running and not game_state.is_paused and not is_transitioning and not (is_instance_valid(tutorial_overlay) and tutorial_overlay.visible))
+	typing_controller.setup(input_box, word_manager, func(): return game_state.running and not game_state.is_paused and not is_transitioning and not (is_instance_valid(tutorial_overlay) and tutorial_overlay.visible), mobile_support)
 	typing_controller.word_matched.connect(_on_word_matched)
 	typing_controller.input_invalid.connect(_on_input_invalid)
 
