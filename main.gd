@@ -265,6 +265,10 @@ func _ready() -> void:
 	input_box.alignment = HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER
 	input_box.context_menu_enabled = false   # no copy/paste bubble on long-press
 	input_box.selecting_enabled = false
+	# URL-type keyboard has no autocorrect/autocapitalize/word-suggestion
+	# bar on Android or iOS, which is what we want for typed game words -
+	# the default text keyboard kept "fixing" words mid-catch.
+	input_box.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_URL
 	if mobile_support.is_touch:
 		input_box.position.y = get_viewport_rect().size.y * 0.55
 	else:
@@ -511,7 +515,9 @@ func _setup_pause_button() -> void:
 	pause_button.anchor_left = 0.0
 	pause_button.anchor_right = 0.0
 	pause_button.position = Vector2(25, 128)
-	pause_button.size = Vector2(140, 36)
+	# 48x48dp is the platform-recommended minimum touch target; the mouse-
+	# driven desktop size (140x36) is too cramped to tap reliably.
+	pause_button.size = Vector2(150, 52) if mobile_support.is_touch else Vector2(140, 36)
 	pause_button.pivot_offset = pause_button.size / 2
 
 	var normal := _pause_btn_style("", 0.9)
