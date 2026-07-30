@@ -422,6 +422,14 @@ func _show_flyout_card(card: Control, should_show: bool) -> void:
 # equivalent of FIFA's "Kick-Off Team / Be a Pro / Be a Keeper" stack,
 # each step nudged further right than the last.
 func _build_flyout(vp: Vector2) -> void:
+	# _flyout_card is anchored to _flyout_panel's width, which is only the
+	# right ~half of the screen (see _build_ui). On a narrow portrait
+	# phone that's not much room, and long localized labels (e.g.
+	# "PRACTICE WEAK KEYS") at a fixed font size were wide enough to force
+	# the card past the screen edge and get clipped/unreachable. Scale
+	# those fonts down together with the available width instead.
+	var flyout_scale: float = clamp(vp.x / 900.0, 0.72, 1.0)
+
 	_flyout_card = PanelContainer.new()
 	_flyout_card.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
 	_flyout_card.add_theme_stylebox_override("panel", JellyTheme.panel_style("popup"))
@@ -433,6 +441,8 @@ func _build_flyout(vp: Vector2) -> void:
 
 	fly_vbox.add_child(_cascade_step(0, _labeled(LocalizationManager.get_string("word_set", _game_state.selected_language).to_upper())))
 	_theme_option = _styled_option_button()
+	_theme_option.add_theme_font_size_override("font_size", roundi(20 * flyout_scale))
+	_theme_option.clip_text = true
 	for theme_name in WordBank.theme_names():
 		_theme_option.add_item(theme_name)
 	_select_option(_theme_option, _game_state.selected_theme)
@@ -440,6 +450,8 @@ func _build_flyout(vp: Vector2) -> void:
 
 	fly_vbox.add_child(_cascade_step(1, _labeled(LocalizationManager.get_string("word_length", _game_state.selected_language).to_upper())))
 	_difficulty_option = _styled_option_button()
+	_difficulty_option.add_theme_font_size_override("font_size", roundi(20 * flyout_scale))
+	_difficulty_option.clip_text = true
 	for d in DIFFICULTIES:
 		var label = LocalizationManager.get_string(DIFFICULTY_LOC_KEYS[d], _game_state.selected_language)
 		_difficulty_option.add_item(label)
@@ -456,8 +468,8 @@ func _build_flyout(vp: Vector2) -> void:
 	toggle_style.border_width_top = 1
 	toggle_style.border_width_bottom = 1
 	toggle_style.border_color = Color(1, 1, 1, 0.08)
-	toggle_style.content_margin_left = 18
-	toggle_style.content_margin_right = 18
+	toggle_style.content_margin_left = int(18 * flyout_scale)
+	toggle_style.content_margin_right = int(18 * flyout_scale)
 	toggle_style.content_margin_top = 12
 	toggle_style.content_margin_bottom = 12
 	toggle_panel.add_theme_stylebox_override("panel", toggle_style)
@@ -469,7 +481,9 @@ func _build_flyout(vp: Vector2) -> void:
 	_weak_keys_check = CheckButton.new()
 	_weak_keys_check.text = LocalizationManager.get_string("weak_keys", _game_state.selected_language).to_upper()
 	_weak_keys_check.button_pressed = _game_state.weak_keys_mode
-	_weak_keys_check.add_theme_font_size_override("font_size", 18)
+	_weak_keys_check.add_theme_font_size_override("font_size", roundi(18 * flyout_scale))
+	_weak_keys_check.clip_text = true
+	_weak_keys_check.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	toggle_vbox.add_child(_weak_keys_check)
 
 	var hint = Label.new()
@@ -482,6 +496,8 @@ func _build_flyout(vp: Vector2) -> void:
 	fly_vbox.add_child(_cascade_step(2, toggle_panel))
 
 	_start_btn = _styled_start_button()
+	_start_btn.add_theme_font_size_override("font_size", roundi(26 * flyout_scale))
+	_start_btn.clip_text = true
 	_start_btn.pressed.connect(_on_start_pressed)
 	fly_vbox.add_child(_cascade_step(3, _start_btn))
 
