@@ -48,6 +48,8 @@ extends Control
 ## 18. Pause button tints when paused (small visual confirmation)
 ## 19. Grace period also softens spawn rate, not just fall speed
 ## 20. All new state resets cleanly on every _start_game() call
+## 21. Input box nudges above the bottom gesture-nav safe area in portrait
+##     (see _bottom_safe_area_inset), so it never sits under the OS bar
 ## ---------------------------------------------------------------------
 
 # --- UI REFERENCES (from main.tscn) ---
@@ -265,12 +267,18 @@ func _ready() -> void:
 	input_box.alignment = HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER
 	input_box.context_menu_enabled = false   # no copy/paste bubble on long-press
 	input_box.selecting_enabled = false
-	# URL-type keyboard has no autocorrect/autocapitalize/word-suggestion
-	# bar on Android or iOS, which is what we want for typed game words -
-	# the default text keyboard kept "fixing" words mid-catch.
-	input_box.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_URL
+	# The keyboard must never show word predictions/suggestions above it -
+	# that's the falling word's correct spelling, handed to the player for
+	# free. URL-type still let some keyboards (Gboard included) show a
+	# suggestion strip. PASSWORD-type reliably suppresses it on Android and
+	# iOS. This does NOT mask the typed text on screen - Godot draws the
+	# LineEdit's text itself; the native OS text field behind it (used only
+	# to bridge IME input) is invisible, so the player still sees exactly
+	# what they type.
+	input_box.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_PASSWORD
+	input_box.secret = false
 	if mobile_support.is_touch:
-		input_box.position.y = get_viewport_rect().size.y * 0.55
+		input_box.position.y = get_viewport_rect().size.y * 0.55 - _bottom_safe_area_inset()
 	else:
 		input_box.position.y = get_viewport_rect().size.y - 120
 	original_input_pos_y = input_box.position.y
@@ -1134,10 +1142,36 @@ func _on_viewport_resized() -> void:
 	if not is_instance_valid(input_box):
 		return
 	if mobile_support.is_touch:
-		input_box.position.y = get_viewport_rect().size.y * 0.55
+		input_box.position.y = get_viewport_rect().size.y * 0.55 - _bottom_safe_area_inset()
 	else:
 		input_box.position.y = get_viewport_rect().size.y - 120
 	original_input_pos_y = input_box.position.y
+
+# --- PORTRAIT COMFORT EXTRA -------------------------------------------------
+# Modern phones in portrait reserve a strip at the bottom of the physical
+# screen for the gesture-nav bar / home indicator, which isn't part of
+# DisplayServer's "safe area". On phones with 3-button nav disabled (the
+# common default), that strip can sit right where the 0.55-height input box
+# lands, so the OS gesture bar visually crowds the typing field. This nudges
+# the input box up by however much of the real screen is outside the safe
+# area at the bottom, converted into the game's own viewport units. It's a
+# no-op (returns 0.0) on desktop, in the editor, and on any phone that
+# doesn't report a safe-area inset, so it can only ever move the box up,
+# never break existing layouts.
+func _bottom_safe_area_inset() -> float:
+	if not mobile_support.is_touch:
+		return 0.0
+	var screen_size: Vector2i = DisplayServer.screen_get_size()
+	if screen_size.y <= 0:
+		return 0.0
+	var safe_area: Rect2i = DisplayServer.get_display_safe_area()
+	var bottom_gap_px: float = float(screen_size.y - (safe_area.position.y + safe_area.size.y))
+	if bottom_gap_px <= 0.0:
+		return 0.0
+	var viewport_h: float = get_viewport_rect().size.y
+	var scale: float = viewport_h / float(screen_size.y)
+	# Cap the nudge so a misreported inset can't shove the box somewhere silly.
+	return clamp(bottom_gap_px * scale, 0.0, viewport_h * 0.08)
 
 func _maybe_hide_keyboard() -> void:
 	var focused := get_viewport().gui_get_focus_owner()
