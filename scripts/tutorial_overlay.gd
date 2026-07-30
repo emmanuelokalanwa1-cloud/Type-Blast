@@ -117,12 +117,21 @@ void fragment() {
 
 
 func _build_ui() -> void:
+	# The old fixed 160px side margins assumed a wide (~800px+) reference
+	# screen. On a narrower portrait phone that left less width than the
+	# card's minimum content size needed, so the card overflowed past the
+	# margin and got clipped off the right edge (e.g. the NEXT button).
+	# Scale the margins to the real viewport instead.
+	var vp: Vector2 = get_viewport_rect().size
+	var side_margin: int = int(clamp(vp.x * 0.12, 20, 160))
+	var vert_margin: int = int(clamp(vp.y * 0.06, 40, 60))
+
 	var margin = MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_top", 60)
-	margin.add_theme_constant_override("margin_bottom", 60)
-	margin.add_theme_constant_override("margin_left", 160)
-	margin.add_theme_constant_override("margin_right", 160)
+	margin.add_theme_constant_override("margin_top", vert_margin)
+	margin.add_theme_constant_override("margin_bottom", vert_margin)
+	margin.add_theme_constant_override("margin_left", side_margin)
+	margin.add_theme_constant_override("margin_right", side_margin)
 	add_child(margin)
 
 	# 2. Rounded, bordered, drop-shadowed card (matches the other screens).
@@ -141,7 +150,12 @@ func _build_ui() -> void:
 	# no wrapper needed.
 
 	var vbox = VBoxContainer.new()
-	vbox.custom_minimum_size = Vector2(480, 0)
+	# Never demand more width than the margin container actually has to
+	# give (side_margin was already subtracted from the viewport above) -
+	# this is what previously forced the whole card past the right edge
+	# on narrow phones.
+	var available_width: float = vp.x - (side_margin * 2)
+	vbox.custom_minimum_size = Vector2(min(480, max(available_width, 220)), 0)
 	vbox.add_theme_constant_override("separation", 16)
 	_card.add_child(vbox)
 
