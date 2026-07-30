@@ -74,15 +74,29 @@ func spawn_word(level: int) -> Label:
 	new_label.set_meta("base_color", random_color)
 	new_label.set_meta("speed_mult", 0.5 if is_boss else 1.0)
 	
-	new_label.add_theme_font_size_override("font_size", 48 if (is_boss or is_powerup) else 32)
-	
+	# Base sizes were tuned for a wide (~860px+) reference screen. On a
+	# narrower phone that made words look oversized relative to how much
+	# horizontal room they actually have to fall through, so scale down
+	# proportionally (never scale up past the original size).
+	var vp_width: float = _container.get_viewport_rect().size.x
+	var font_scale: float = clamp(vp_width / 860.0, 0.6, 1.0)
+	var base_font_size: int = 48 if (is_boss or is_powerup) else 32
+	new_label.add_theme_font_size_override("font_size", roundi(base_font_size * font_scale))
+
 	# --- Sleek Text Drop Shadow Configuration ---
 	new_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.75))
 	new_label.add_theme_constant_override("shadow_offset_x", 2)
 	new_label.add_theme_constant_override("shadow_offset_y", 2)
 	new_label.add_theme_constant_override("shadow_outline_size", 1)
-	
-	new_label.position = Vector2(randf_range(300, _container.get_viewport_rect().size.x - 300), -50)
+
+	# Old fixed 300px side margins left only a ~120px spawn corridor on a
+	# 720px-wide phone, so words landed almost on top of each other and
+	# looked like one giant overlapping block. Scale the margin to the
+	# screen instead, so there's always a wide, proportional spawn band.
+	var side_margin: float = clamp(vp_width * 0.12, 40.0, 300.0)
+	var spawn_min: float = side_margin
+	var spawn_max: float = max(vp_width - side_margin, spawn_min + 1.0)
+	new_label.position = Vector2(randf_range(spawn_min, spawn_max), -50)
 	active_words.append(new_label)
 	return new_label
 
