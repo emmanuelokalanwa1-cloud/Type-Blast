@@ -512,22 +512,33 @@ func _layout_labels() -> void:
 	const REFERENCE_WIDTH := 860.0
 	var s: float = clamp(screen.x / REFERENCE_WIDTH, 0.55, 1.0)
 
+	# Curved-edge / punch-hole phones can have the real safe-drawing area
+	# inset from the left and/or right of the reported viewport. Only the
+	# TOP inset was being handled (via mobile_support.apply_safe_area_top
+	# in main.gd) - side-anchored clusters (score, timer, lives, WPM) had
+	# no equivalent, so on a curved-edge device they could sit partly
+	# under the curve. `left_inset`/`right_inset` are 0 on any device that
+	# doesn't report one, so this can only ever pull clusters inward.
+	var side_insets := _safe_area_side_insets(screen)
+	var left_inset: float = side_insets.x
+	var right_inset: float = side_insets.y
+
 	# --- TOP LEFT: SCORE CLUSTER ---
 	highscore_label.add_theme_font_size_override("font_size", roundi(20 * s))
 	highscore_label.modulate = Color(0.75, 0.75, 0.75)
 	highscore_label.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
-	highscore_label.position = Vector2(46 * s, 24 * s)
+	highscore_label.position = Vector2(46 * s + left_inset, 24 * s)
 	highscore_label.size = Vector2(240 * s, 26 * s)
 	highscore_label.clip_text = false
 
 	score_label.add_theme_font_size_override("font_size", roundi(40 * s))
 	score_label.modulate = Color.WHITE
 	score_label.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
-	score_label.position = Vector2(46 * s, 54 * s)
+	score_label.position = Vector2(46 * s + left_inset, 54 * s)
 
 	var topleft_w: float = 280 * s
 	_panel_topleft.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
-	_panel_topleft.position = Vector2(24 * s, 12 * s)
+	_panel_topleft.position = Vector2(24 * s + left_inset, 12 * s)
 	_panel_topleft.size = Vector2(topleft_w, 108 * s) # roomy padding so text never clips
 
 	# --- TOP CENTER: STATUS CLUSTER ---
@@ -547,44 +558,62 @@ func _layout_labels() -> void:
 	time_label.add_theme_font_size_override("font_size", roundi(40 * s))
 	time_label.modulate = Color(1.0, 0.4, 0.4)
 	time_label.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
-	time_label.position = Vector2(screen.x - topright_w - (20 * s), 30 * s)
+	time_label.position = Vector2(screen.x - right_inset - topright_w - (20 * s), 30 * s)
 
-	_time_warning_icon.position = Vector2(screen.x - topright_w - (10 * s), 26 * s)
+	_time_warning_icon.position = Vector2(screen.x - right_inset - topright_w - (10 * s), 26 * s)
 
 	_panel_topright.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
-	_panel_topright.position = Vector2(screen.x - topright_w - (24 * s), 12 * s)
+	_panel_topright.position = Vector2(screen.x - right_inset - topright_w - (24 * s), 12 * s)
 	_panel_topright.size = Vector2(topright_w, 78 * s)
 
 	# --- BOTTOM LEFT: LIVES CLUSTER ---
 	lives_label.visible = false # replaced by drawn heart row (addition 1)
-	_heart_row.position = Vector2(20 * s, screen.y - (70 * s))
+	_heart_row.position = Vector2(20 * s + left_inset, screen.y - (70 * s))
 
 	_panel_bottomleft.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
-	_panel_bottomleft.position = Vector2(24 * s, screen.y - (96 * s))
+	_panel_bottomleft.position = Vector2(24 * s + left_inset, screen.y - (96 * s))
 	_panel_bottomleft.size = Vector2(260 * s, 78 * s)
 
 	# --- BOTTOM RIGHT: PERFORMANCE CLUSTER ---
 	var bottomright_w: float = 296 * s
 	wpm_label.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
-	wpm_label.position = Vector2(screen.x - bottomright_w + (4 * s), screen.y - (100 * s))
+	wpm_label.position = Vector2(screen.x - right_inset - bottomright_w + (4 * s), screen.y - (100 * s))
 
-	_wpm_graph.position = Vector2(screen.x - bottomright_w + (4 * s), screen.y - (68 * s))
+	_wpm_graph.position = Vector2(screen.x - right_inset - bottomright_w + (4 * s), screen.y - (68 * s))
 
 	accuracy_label.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
-	accuracy_label.position = Vector2(screen.x - bottomright_w + (4 * s), screen.y - (34 * s))
+	accuracy_label.position = Vector2(screen.x - right_inset - bottomright_w + (4 * s), screen.y - (34 * s))
 
-	_accuracy_gauge.position = Vector2(screen.x - (68 * s), screen.y - (40 * s))
+	_accuracy_gauge.position = Vector2(screen.x - right_inset - (68 * s), screen.y - (40 * s))
 
 	_panel_bottomright.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
-	_panel_bottomright.position = Vector2(screen.x - bottomright_w - (24 * s), screen.y - (112 * s))
+	_panel_bottomright.position = Vector2(screen.x - right_inset - bottomright_w - (24 * s), screen.y - (112 * s))
 	_panel_bottomright.size = Vector2(bottomright_w, 96 * s)
 
 	# --- misc floating elements ---
 	_streak_badge.position = Vector2((screen.x / 2) - (60 * s), 96 * s)
-	_pause_dot.position = Vector2(90 * s, 8 * s)
+	_pause_dot.position = Vector2(90 * s + left_inset, 8 * s)
 
 	_update_corner_frame()
 	_reposition_ambient_particles()
+
+# Returns (left, right) inset in the game's own viewport units, derived from
+# DisplayServer's reported safe area vs the real screen size. Zero on
+# desktop, in the editor, or on any phone that doesn't report an inset -
+# so this only ever pulls HUD clusters inward, never moves them outward.
+func _safe_area_side_insets(screen: Vector2) -> Vector2:
+	var screen_size: Vector2i = DisplayServer.screen_get_size()
+	if screen_size.x <= 0:
+		return Vector2.ZERO
+	var safe_area: Rect2i = DisplayServer.get_display_safe_area()
+	var left_gap_px: float = float(safe_area.position.x)
+	var right_gap_px: float = float(screen_size.x - (safe_area.position.x + safe_area.size.x))
+	if left_gap_px <= 0.0 and right_gap_px <= 0.0:
+		return Vector2.ZERO
+	var scale: float = screen.x / float(screen_size.x)
+	var left_inset: float = clamp(left_gap_px * scale, 0.0, screen.x * 0.06)
+	var right_inset: float = clamp(right_gap_px * scale, 0.0, screen.x * 0.06)
+	return Vector2(left_inset, right_inset)
 
 ## 6. HUD intro animation: panels + corner frame fade/slide in on start.
 func _play_intro_animation() -> void:
