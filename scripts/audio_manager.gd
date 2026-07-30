@@ -13,13 +13,18 @@ const PITCH_VARIANCE := 0.08     # Up to 8% pitch variation to prevent ear fatig
 const VOLUME_VARIANCE_DB := 1.5  # Up to 1.5 dB subtle volume variation for realism
 const ERROR_COOLDOWN_MSEC := 90
 
-# Both playlists support infinite songs (we will load your 4 menu and 4 gameplay songs here)
-var menu_playlist: Array[AudioStreamPlayer] = []
-var gameplay_playlist: Array[AudioStreamPlayer] = []
+# --- MUSIC POOL (fix) ---------------------------------------------------
+# Menu and gameplay used to be two SEPARATE playlists, so a 4-song pool
+# got split 1 track for the menu / 3 tracks for gameplay - the menu never
+# felt like it was rotating (nothing to rotate to) and gameplay never got
+# the 4th song at all. They now share one pool: whichever track is already
+# playing just keeps playing across the menu<->gameplay transition instead
+# of being cut and restarted, and it rotates through all 4 either way.
+var music_pool: Array[AudioStreamPlayer] = []
+var current_music_idx: int = -1
 
-var current_menu_idx: int = -1
-var current_gameplay_idx: int = -1
-var _is_playing_menu_playlist: bool = true
+# Update 1: shuffle-bag queue (see _next_shuffled_index/_refill_shuffle_queue)
+var _shuffle_queue: Array[int] = []
 
 # Sound effect players
 var success_snd: AudioStreamPlayer
@@ -44,13 +49,17 @@ var _game_state: GameState
 var _music_bus_idx := -1
 var _sfx_bus_idx := -1
 var _last_error_msec := 0
+
+# Update 2: ducking (see _duck_music_for). This Tween was previously
+# declared and never used anywhere in the file.
 var _duck_tween: Tween
+const DUCK_VOLUME_DB := -12.0   # how much music dips under a ducked sound
+const DUCK_FADE_TIME := 0.15    # how quickly it dips down / eases back
 
 
 func setup(
 	game_state: GameState,
-	menu_tracks: Array, # Now accepts your array of menu tracks
-	gameplay_tracks: Array, # Accepts your array of gameplay tracks
+	music_tracks: Array, # all of your music tracks, shared by menu + gameplay
 	success: AudioStreamPlayer,
 	error: AudioStreamPlayer,
 	keystroke: AudioStreamPlayer = null,
@@ -61,24 +70,18 @@ func setup(
 	gameover_voice: AudioStreamPlayer = null
 ) -> void:
 	_game_state = game_state
-	
-	# Cast incoming arrays to the proper type safely
-	menu_playlist.clear()
-	for track in menu_tracks:
+
+	# Cast incoming array to the proper type safely
+	music_pool.clear()
+	for track in music_tracks:
 		if track is AudioStreamPlayer:
-			menu_playlist.append(track)
-			
-	gameplay_playlist.clear()
-	for track in gameplay_tracks:
-		if track is AudioStreamPlayer:
-			gameplay_playlist.append(track)
+			music_pool.append(track)
 
 	# --- FIX: force-disable stream looping so `finished` actually fires ---
 	# If a track's audio import has "Loop" enabled, AudioStreamPlayer will
 	# never emit `finished` and will just replay the same song forever
 	# instead of handing off to switch_to_next_music().
-	_disable_stream_looping(menu_playlist)
-	_disable_stream_looping(gameplay_playlist)
+	_disable_stream_looping(music_pool)
 
 	success_snd = success
 	error_snd = error
@@ -119,11 +122,7 @@ func setup(
 	_register_pool("notification", notification_snd, POOL_SIZE)
 
 	# Connect all tracks to our automatic playlist manager
-	for track in menu_playlist:
-		if track and not track.finished.is_connected(_on_music_track_finished):
-			track.finished.connect(_on_music_track_finished)
-
-	for track in gameplay_playlist:
+	for track in music_pool:
 		if track and not track.finished.is_connected(_on_music_track_finished):
 			track.finished.connect(_on_music_track_finished)
 
@@ -205,9 +204,7 @@ func apply_volume(instant: bool = false) -> void:
 	if _music_bus_idx >= 0:
 		_apply_bus_volume(_music_bus_idx, target_music_db, instant)
 	else:
-		for track in menu_playlist:
-			_apply_player_volume(track, target_music_db, instant)
-		for track in gameplay_playlist:
+		for track in music_pool:
 			_apply_player_volume(track, target_music_db, instant)
 
 	if _sfx_bus_idx >= 0:
@@ -275,73 +272,54 @@ func set_sfx_enabled(on: bool) -> void:
 	apply_volume()
 
 
-# --- MUSIC PLAYBACK (WITH CROSSFADING) ---
+# --- MUSIC PLAYBACK (SHARED POOL, WITH CROSSFADING) ---
 
+# Menu and gameplay both just mean "make sure something from the pool is
+# playing" now - neither one hard-swaps the other's track anymore. If
+# music is already going when the screen changes, it keeps going. If
+# nothing's playing yet (first launch, or after stop_all_music), this
+# kicks off a fresh shuffled rotation.
 func play_menu_music() -> void:
-	_transition_music_playlist(true)
-
+	_ensure_music_playing()
 
 func start_gameplay_music() -> void:
-	_transition_music_playlist(false)
+	_ensure_music_playing()
 
-
-func _transition_music_playlist(to_menu: bool) -> void:
-	var old_playlist = gameplay_playlist if to_menu else menu_playlist
-	var new_playlist = menu_playlist if to_menu else gameplay_playlist
-	
-	if new_playlist.is_empty():
+func _ensure_music_playing() -> void:
+	if music_pool.is_empty():
 		return
+	for track in music_pool:
+		if is_instance_valid(track) and track.playing:
+			return
+	_play_track(_next_shuffled_index())
 
-	_is_playing_menu_playlist = to_menu
-	
-	# Stop everything on the old playlist with a clean fadeout
-	for track in old_playlist:
-		if track and track.playing:
-			var fade_out = create_tween()
-			fade_out.tween_property(track, "volume_db", -80.0, CROSSFADE_TIME)
-			fade_out.tween_callback(track.stop)
 
-	# Pick a random starting track on our new playlist
-	var next_idx = randi() % new_playlist.size()
-	if to_menu:
-		current_menu_idx = next_idx
-	else:
-		current_gameplay_idx = next_idx
-		
-	var next_track = new_playlist[next_idx]
-	if next_track and next_track.stream:
-		next_track.volume_db = -80.0
-		next_track.play()
-		
-		var target_db = _to_db(_game_state.music_volume) if not _game_state.muted else -80.0
-		var fade_in = create_tween()
-		fade_in.tween_property(next_track, "volume_db", target_db, CROSSFADE_TIME)
-		
-		if not to_menu:
-			music_track_changed.emit(current_gameplay_idx)
+func _play_track(idx: int) -> void:
+	if idx < 0 or idx >= music_pool.size():
+		return
+	var track = music_pool[idx]
+	if not track or not track.stream:
+		return
+	current_music_idx = idx
+	track.volume_db = -80.0
+	track.play()
+	var target_db = _to_db(_game_state.music_volume) if not _game_state.muted else -80.0
+	var fade_in := create_tween()
+	fade_in.tween_property(track, "volume_db", target_db, CROSSFADE_TIME)
+	music_track_changed.emit(current_music_idx)
 
 
 func switch_to_next_music() -> void:
-	var playlist = menu_playlist if _is_playing_menu_playlist else gameplay_playlist
-	if playlist.size() <= 1:
-		if playlist.size() == 1 and playlist[0] and not playlist[0].playing:
-			playlist[0].play()
+	if music_pool.size() <= 1:
+		if music_pool.size() == 1 and music_pool[0] and not music_pool[0].playing:
+			_play_track(0)
 		return
 
-	var old_idx = current_menu_idx if _is_playing_menu_playlist else current_gameplay_idx
-	var old_track = playlist[old_idx] if old_idx >= 0 and old_idx < playlist.size() else null
-	
-	# Prevent selecting the same song twice in a row
-	var new_idx = old_idx
-	while new_idx == old_idx:
-		new_idx = randi() % playlist.size()
+	var old_idx = current_music_idx
+	var old_track = music_pool[old_idx] if old_idx >= 0 and old_idx < music_pool.size() else null
+	var new_idx = _next_shuffled_index()
 
-	if _is_playing_menu_playlist:
-		current_menu_idx = new_idx
-	else:
-		current_gameplay_idx = new_idx
-
-	var new_track = playlist[new_idx]
+	var new_track = music_pool[new_idx]
 	if not new_track or not new_track.stream:
 		return
 
@@ -353,26 +331,87 @@ func switch_to_next_music() -> void:
 		fade_out.tween_property(old_track, "volume_db", -80.0, CROSSFADE_TIME)
 		fade_out.tween_callback(old_track.stop)
 
+	current_music_idx = new_idx
 	new_track.volume_db = -80.0
 	new_track.play()
 	var fade_in := create_tween()
 	fade_in.tween_property(new_track, "volume_db", target_db, CROSSFADE_TIME)
-	
-	if not _is_playing_menu_playlist:
-		music_track_changed.emit(current_gameplay_idx)
+	music_track_changed.emit(current_music_idx)
 
 
 func stop_all_music() -> void:
-	for track in menu_playlist:
+	for track in music_pool:
 		if track and track.playing:
 			track.stop()
-	for track in gameplay_playlist:
-		if track and track.playing:
-			track.stop()
+
+# FIX: previously main.gd paused/resumed one hardcoded node (music_snd)
+# directly, which only worked while that exact node happened to be the
+# one playing. With a shared pool any of the 4 tracks could be active,
+# so pausing needs to target whichever one is actually playing.
+func pause_music(paused: bool) -> void:
+	for track in music_pool:
+		if is_instance_valid(track) and track.playing:
+			track.stream_paused = paused
 
 
 func _on_music_track_finished() -> void:
 	switch_to_next_music()
+
+
+# --- UPDATE 1: SHUFFLE-BAG ROTATION -----------------------------------
+# Plain "random, just don't repeat the last one" can still play the same
+# 2 songs far more than the other 2 over a play session - it's random,
+# not evenly spread. A shuffle bag guarantees every track in the pool
+# plays exactly once before any of them repeat, then reshuffles for the
+# next lap - the same trick most music apps use so "shuffle" actually
+# feels varied instead of clumpy.
+func _next_shuffled_index() -> int:
+	if _shuffle_queue.is_empty():
+		_refill_shuffle_queue()
+	return _shuffle_queue.pop_back()
+
+func _refill_shuffle_queue() -> void:
+	_shuffle_queue.clear()
+	for i in music_pool.size():
+		_shuffle_queue.append(i)
+	_shuffle_queue.shuffle()
+	# Avoid the new lap accidentally starting with the same track that
+	# just finished the previous lap, which would sound like a repeat.
+	if _shuffle_queue.size() > 1 and _shuffle_queue[-1] == current_music_idx:
+		var swap_pos := randi_range(0, _shuffle_queue.size() - 2)
+		var tmp = _shuffle_queue[-1]
+		_shuffle_queue[-1] = _shuffle_queue[swap_pos]
+		_shuffle_queue[swap_pos] = tmp
+
+
+# --- UPDATE 2: MUSIC DUCKING -------------------------------------------
+# `_duck_tween` existed as a declared variable but nothing in the file
+# ever used it - the game-over voice line and level-up sting played
+# straight on top of full-volume music with no ducking, so they could
+# get buried under it. This dips whichever track is currently playing
+# for the duration of the ducked sound, then eases back to normal.
+func _duck_music_for(duration_sec: float) -> void:
+	if duration_sec <= 0.0 or music_pool.is_empty():
+		return
+	var playing_track: AudioStreamPlayer = null
+	for track in music_pool:
+		if is_instance_valid(track) and track.playing:
+			playing_track = track
+			break
+	if not playing_track:
+		return
+
+	if _duck_tween and _duck_tween.is_valid():
+		_duck_tween.kill()
+
+	var normal_db = _to_db(_game_state.music_volume) if not _game_state.muted else -80.0
+	var ducked_db = normal_db + DUCK_VOLUME_DB
+	var hold_time = max(duration_sec - DUCK_FADE_TIME * 2.0, 0.0)
+
+	_duck_tween = create_tween()
+	_duck_tween.tween_property(playing_track, "volume_db", ducked_db, DUCK_FADE_TIME)
+	_duck_tween.tween_interval(hold_time)
+	_duck_tween.tween_property(playing_track, "volume_db", normal_db, DUCK_FADE_TIME)
 
 
 # --- SFX CONTROLS WITH MICRO-VARIATIONS ---
@@ -422,10 +461,16 @@ func play_notification() -> void:
 	_play_from_pool("notification", 1.0)
 
 func play_level_up_sting() -> void:
-	if levelup_sting_snd: levelup_sting_snd.play()
+	if levelup_sting_snd:
+		levelup_sting_snd.play()
+		if levelup_sting_snd.stream:
+			_duck_music_for(levelup_sting_snd.stream.get_length())
 
 func play_whoosh() -> void:
 	if whoosh_snd: whoosh_snd.play()
 
 func play_game_over_voice() -> void:
-	if gameover_voice_snd: gameover_voice_snd.play()
+	if gameover_voice_snd:
+		gameover_voice_snd.play()
+		if gameover_voice_snd.stream:
+			_duck_music_for(gameover_voice_snd.stream.get_length())
