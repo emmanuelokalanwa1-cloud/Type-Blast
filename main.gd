@@ -1,6 +1,6 @@
 extends Control
 
-## Main no longer owns gameplay logic itself — it just builds the
+## Main no longer owns gameplay logic itself â€” it just builds the
 ## sub-systems (each its own node/script under res://scripts/), wires their
 ## signals together, and drives the per-frame loop (spawning, falling,
 ## freeze/slow-mo, screen shake, level-up transitions).
@@ -27,7 +27,7 @@ extends Control
 ## fresh run opens, so no stale input state leaks between screens.
 ##
 ## 20 additive extras (all self-contained in this script, all guarded, none
-## call into other scripts' unknown methods — so this can't break anything):
+## call into other scripts' unknown methods â€” so this can't break anything):
 ##  1. Level-only fall-speed curve (the actual bug fix)
 ##  2. Soft-landing grace period at the start of every new level
 ##  3. Miss-streak rubber-band assist (eases spawn rate if you're struggling)
@@ -71,7 +71,7 @@ extends Control
 @onready var error_snd = get_node_or_null("ErrorPlayer")
 @onready var music_snd = get_node_or_null("MusicPlayer")
 
-# Bonus SFX pack + keystroke sound — now real scene nodes (see main.tscn)
+# Bonus SFX pack + keystroke sound â€” now real scene nodes (see main.tscn)
 # instead of being built from a hardcoded path in AudioManager. Change any
 # of these by clicking the node in the editor and dragging a new file onto
 # its Stream property; no script edit needed.
@@ -244,15 +244,18 @@ func _ready() -> void:
 	audio = preload("res://scenes/audio_manager.tscn").instantiate() as AudioManager
 	add_child(audio)
 	
-	# Pack your gameplay tracks into an array for the new playlist system
-	var gameplay_tracks: Array[AudioStreamPlayer] = []
-	if has_node("MusicPlayer1"): gameplay_tracks.append($MusicPlayer1)
-	if has_node("MusicPlayer2"): gameplay_tracks.append($MusicPlayer2)
-	if has_node("MusicPlayer3"): gameplay_tracks.append($MusicPlayer3)
-	
-	# FIXED LINE BELOW: Wrapped music_snd inside an Array bracket [music_snd] 
-	# to support multiple menu tracks expected by the updated AudioManager setup.
-	audio.setup(game_state, [music_snd], gameplay_tracks, success_snd, error_snd, keystroke_snd,
+	# All 4 songs go into ONE shared pool now - menu and gameplay used to
+	# get separate playlists (1 track for menu, 3 for gameplay), so the
+	# menu never had anything to rotate to and gameplay never got the 4th
+	# song. AudioManager now treats "menu" and "gameplay" as the same
+	# continuous rotation instead of two disjoint splits.
+	var music_tracks: Array[AudioStreamPlayer] = []
+	if music_snd: music_tracks.append(music_snd)
+	if has_node("MusicPlayer1"): music_tracks.append($MusicPlayer1)
+	if has_node("MusicPlayer2"): music_tracks.append($MusicPlayer2)
+	if has_node("MusicPlayer3"): music_tracks.append($MusicPlayer3)
+
+	audio.setup(game_state, music_tracks, success_snd, error_snd, keystroke_snd,
 		click_snd, notification_snd, levelup_sting_snd, whoosh_snd, gameover_voice_snd)
 
 	ui_hud = preload("res://scenes/ui_hud.tscn").instantiate() as UiHud
@@ -286,8 +289,15 @@ func _ready() -> void:
 	game_state.level_up.connect(_on_level_up)
 	game_state.game_ended.connect(_on_game_ended)
 
-	if music_snd:
-		music_snd.finished.connect(_on_music_finished)
+	# NOTE: music_snd used to be the menu-only track, so this hook (ending
+	# the run as a "win" whenever it finished) was harmless dead code - it
+	# never played during a run. Now that music_snd is part of the shared
+	# pool (see the fix above), it CAN play mid-run, so this connection
+	# would spuriously end runs early the moment that one track happened
+	# to finish. Removed rather than left as a live landmine; if you want
+	# a "run ends when the current song ends" mode, that belongs on
+	# AudioManager's music_track_changed/finished signals instead, keyed
+	# off whichever track is actually playing, not one hardcoded node.
 
 	word_label_template.visible = false
 	word_label_template.add_theme_font_size_override("font_size", 32)
@@ -428,7 +438,7 @@ func _ready() -> void:
 
 	_check_orientation_guard()
 
-## Daily Login Reward popup — separate from Daily Challenge and from
+## Daily Login Reward popup â€” separate from Daily Challenge and from
 ## Career/Achievements toasts. Fires at most once per calendar day, and
 ## only once tutorial_seen is true (first-ever launch shows the tutorial
 ## instead, so a brand new player doesn't get a reward popup for a streak
@@ -481,7 +491,7 @@ func _show_daily_login_popup(reward: Dictionary, newly_badges: Array, newly_miss
 	card.add_child(vb)
 
 	var title := Label.new()
-	title.text = "ðŸŽ DAILY LOGIN REWARD"
+	title.text = "Ã°Å¸Å½ DAILY LOGIN REWARD"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 22)
 	title.add_theme_color_override("font_color", Color(1.0, 0.78, 0.25))
@@ -641,7 +651,7 @@ func _toggle_pause() -> void:
 		if is_instance_valid(_pause_status_dot):
 			_pause_status_dot.color = Color(0.3, 0.9, 0.4)
 	if music_snd:
-		music_snd.stream_paused = game_state.is_paused
+		audio.pause_music(game_state.is_paused)
 
 func _on_resume_pressed() -> void:
 	game_state.is_paused = false
@@ -651,7 +661,7 @@ func _on_resume_pressed() -> void:
 	if is_instance_valid(_pause_status_dot):
 		_pause_status_dot.color = Color(0.3, 0.9, 0.4)
 	if music_snd:
-		music_snd.stream_paused = false
+		audio.pause_music(false)
 
 func _on_pause_restart_pressed() -> void:
 	pause_menu.close()
@@ -699,7 +709,7 @@ func _on_quit_to_menu() -> void:
 	if is_instance_valid(_pause_status_dot):
 		_pause_status_dot.color = Color(0.3, 0.9, 0.4)
 	if music_snd:
-		music_snd.stream_paused = false
+		audio.pause_music(false)
 
 	mobile_support.hide_keyboard()
 	if typing_controller: typing_controller.reset()
@@ -714,7 +724,7 @@ func _on_quit_to_menu() -> void:
 func _on_tutorial_finished() -> void:
 	difficulty_menu.open()
 	# By this point the player has tapped NEXT/SKIP/GOT IT at least once,
-	# so _input() should already have set _audio_unlocked — but fall back
+	# so _input() should already have set _audio_unlocked â€” but fall back
 	# to the pending-music flag just in case, same as the tutorial_seen path.
 	if _audio_unlocked:
 		audio.play_menu_music()
