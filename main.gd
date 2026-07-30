@@ -397,6 +397,8 @@ func _ready() -> void:
 	else:
 		tutorial_overlay.open()
 
+	_check_orientation_guard()
+
 ## Daily Login Reward popup — separate from Daily Challenge and from
 ## Career/Achievements toasts. Fires at most once per calendar day, and
 ## only once tutorial_seen is true (first-ever launch shows the tutorial
@@ -1139,6 +1141,7 @@ func _on_app_focus_lost() -> void:
 		_toggle_pause()
 
 func _on_viewport_resized() -> void:
+	_check_orientation_guard()
 	if not is_instance_valid(input_box):
 		return
 	if mobile_support.is_touch:
@@ -1146,6 +1149,49 @@ func _on_viewport_resized() -> void:
 	else:
 		input_box.position.y = get_viewport_rect().size.y - 120
 	original_input_pos_y = input_box.position.y
+
+# --- ROTATE-GUARD EXTRA ------------------------------------------------------
+# The project should be locked to portrait in Project Settings > Display >
+# Window > Handheld > Orientation, which stops the OS from rotating at all.
+# This is a safety net for the devices/OEM skins that ignore that setting:
+# if the viewport ever reports landscape (width > height), auto-pause and
+# cover the screen with a "rotate back" message instead of letting the
+# portrait-tuned HUD/spawn math run against the wrong dimensions. Fully
+# self-contained - builds its own overlay node, doesn't touch main.tscn.
+var _rotate_guard: ColorRect
+
+func _ensure_rotate_guard() -> void:
+	if is_instance_valid(_rotate_guard):
+		return
+	_rotate_guard = ColorRect.new()
+	_rotate_guard.color = Color(0.02, 0.02, 0.03, 0.97)
+	_rotate_guard.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_rotate_guard.mouse_filter = Control.MOUSE_FILTER_STOP
+	_rotate_guard.z_index = 4096
+	_rotate_guard.visible = false
+
+	var lbl := Label.new()
+	lbl.text = "Please rotate your device back to portrait to keep playing"
+	lbl.add_theme_font_size_override("font_size", 28)
+	lbl.horizontal_alignment = HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER
+	lbl.vertical_alignment = VerticalAlignment.VERTICAL_ALIGNMENT_CENTER
+	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD
+	lbl.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	lbl.add_theme_constant_override("margin_left", 40)
+	lbl.add_theme_constant_override("margin_right", 40)
+	_rotate_guard.add_child(lbl)
+	add_child(_rotate_guard)
+
+func _check_orientation_guard() -> void:
+	_ensure_rotate_guard()
+	var size := get_viewport_rect().size
+	var is_landscape := size.x > size.y
+	if is_landscape and not _rotate_guard.visible:
+		_rotate_guard.visible = true
+		if game_state.running and not game_state.is_paused:
+			_toggle_pause()
+	elif not is_landscape and _rotate_guard.visible:
+		_rotate_guard.visible = false
 
 # --- PORTRAIT COMFORT EXTRA -------------------------------------------------
 # Modern phones in portrait reserve a strip at the bottom of the physical
