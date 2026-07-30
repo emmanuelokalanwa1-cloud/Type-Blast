@@ -176,6 +176,35 @@ var streak_relief_timer := 0.0
 var streak_relief_factor := 1.0   # multiplies base_fall_speed while active; 1.0 = no relief
 var streak_relief_tier := 0       # 0 = inactive, 1/2/3 = which tier is currently easing the fall
 
+# --- Difficulty curve extras (22, 23, 24): flow-model additions on top of
+# the existing linear-with-caps + grace + rubber-band curve. ---
+
+# 22. EARLY-GAME EASE-IN. The old curve added a flat +18 fall-speed /
+# -0.32s spawn-delay step every level, so level 1->2 was the exact same
+# size jump as level 6->7. Real difficulty curves ramp gentler at the very
+# start so a new player gets a soft on-ramp. `eased_level_progress` replaces
+# raw (level - 1) in the fall-speed/spawn-delay formulas below: it grows by
+# less than a full step per level-up until EASE_IN_LEVELS, then by a full
+# step every level after that (still capped by the existing hard caps).
+const EASE_IN_LEVELS := 4
+var eased_level_progress := 0.0
+
+# 23. FRENZY COOLDOWN. Frenzy is meant to read as a rewarded, occasional
+# spike (the "release" half of a sawtooth curve) - but nothing stopped it
+# re-triggering the instant combo climbed back over threshold right after
+# it ended, which at high combo can happen almost immediately and make it
+# feel like background noise instead of a spike. This adds a short rest
+# window after frenzy ends before it's allowed to fire again.
+const FRENZY_COOLDOWN_SECONDS := 5.0
+var frenzy_cooldown_timer := 0.0
+
+# 24. PROPORTIONAL GRACE. level_grace_duration used to be one fixed value
+# for every level-up regardless of how big that level's actual difficulty
+# jump was. Now scaled by the same ease-in step size (22): the gentle early
+# jumps get a slightly shorter breather (already easy), full-size jumps
+# later get a slightly longer one - so the "release" is sized to the "ramp"
+# instead of a flat number tacked on everywhere.
+
 func _ready() -> void:
 	randomize()
 
@@ -751,8 +780,8 @@ func _start_game() -> void:
 	streak_relief_timer = 0.0
 	streak_relief_factor = 1.0
 	streak_relief_tier = 0
-
-	game_state.start_run()
+	eased_level_progress = 0.0
+	frenzy_cooldown_timer = 0.0
 	AnalyticsManager.log_event("run_started", {
 		"difficulty": game_state.selected_difficulty,
 		"theme": game_state.selected_theme,
@@ -809,7 +838,10 @@ func _process(delta: float) -> void:
 
 	var frenzy_threshold = clamp(60 - (game_state.level - 1) * 2, 30, 60)
 
-	if game_state.combo >= frenzy_threshold and not game_state.frenzy_mode:
+	if frenzy_cooldown_timer > 0.0:                                        # 23
+		frenzy_cooldown_timer = max(0.0, frenzy_cooldown_timer - delta)
+
+	if game_state.combo >= frenzy_threshold and not game_state.frenzy_mode and frenzy_cooldown_timer <= 0.0:
 		game_state.frenzy_mode = true
 		frenzy_warned = false
 		ui_hud.set_target_bg(Color.MAGENTA)
@@ -818,6 +850,7 @@ func _process(delta: float) -> void:
 	elif game_state.combo < frenzy_threshold and game_state.frenzy_mode:
 		game_state.frenzy_mode = false
 		frenzy_warned = false
+		frenzy_cooldown_timer = FRENZY_COOLDOWN_SECONDS                    # 23
 		ui_hud.set_target_bg(ui_hud.theme_for_level(game_state.level))
 	elif game_state.frenzy_mode and game_state.combo <= frenzy_threshold + 5 and not frenzy_warned:
 		frenzy_warned = true
@@ -834,7 +867,7 @@ func _process(delta: float) -> void:
 	if not game_state.running:
 		return
 
-	base_fall_speed = clamp(40.0 + (game_state.level - 1) * 18.0 + career_fall_speed_bonus, 40.0, max_fall_speed_cap)
+	base_fall_speed = clamp(40.0 + eased_level_progress * 18.0 + career_fall_speed_bonus, 40.0, max_fall_speed_cap)   # 22
 	if streak_relief_timer > 0.0:                                          # 21
 		base_fall_speed *= streak_relief_factor
 
@@ -862,7 +895,7 @@ func _process(delta: float) -> void:
 			spawned_label.set_meta("is_lucky", true)
 			spawned_label.modulate = Color(1.0, 0.85, 0.15)
 
-		var base_delay = 3.2 - ((game_state.level - 1) * 0.32)
+		var base_delay = 3.2 - (eased_level_progress * 0.32)              # 22
 		var target_delay = max(min_spawn_delay_cap, base_delay)
 
 		if miss_streak >= 3:
@@ -1018,10 +1051,25 @@ func _on_level_up(new_level: int) -> void:
 		ui_hud.spawn_floating_text("PERFECT LEVEL! +10s", Vector2(get_viewport_rect().size.x / 2, 260), Color.GOLD)
 	current_level_had_miss = false
 
-	level_grace_timer = level_grace_duration
+	# 22/24: advance the eased curve by this level's step size, and size the
+	# grace period to match - a gentle early step gets a shorter breather
+	# (it was already easy), a full-size step gets a slightly longer one.
+	var step_size := _level_step_multiplier(new_level)
+	eased_level_progress += step_size
+	level_grace_timer = level_grace_duration * clamp(lerp(0.75, 1.25, step_size), 0.75, 1.25)
 
 	var tier_index = clamp(new_level - 1, 0, difficulty_tier_names.size() - 1)
 	ui_hud.spawn_floating_text(difficulty_tier_names[tier_index], Vector2(get_viewport_rect().size.x / 2, 320), Color.ORANGE)
+
+# 22. The step *into* `level` (i.e. from level-1 to level). Ramps smoothly
+# from a gentle first step up to a full-size step by EASE_IN_LEVELS - after
+# that every step is exactly the same size the original flat formula used
+# (so nothing about the late-game climb rate changes, only how gently it
+# starts). smoothstep avoids any sudden jump at the ease-in boundary.
+func _level_step_multiplier(level: int) -> float:
+	var step_number: float = float(level - 1) # 1 for level 2, 2 for level 3, etc.
+	var t: float = clamp(step_number / EASE_IN_LEVELS, 0.0, 1.0)
+	return lerp(0.3, 1.0, smoothstep(0.0, 1.0, t))
 
 func _on_music_finished() -> void:
 	if game_state.running and game_state.lives > 0:
