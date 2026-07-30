@@ -501,72 +501,87 @@ func _apply_shadows_to_all() -> void:
 func _layout_labels() -> void:
 	var screen = _root.get_viewport_rect().size
 
+	# The panel widths/offsets below were tuned against an ~860px-wide
+	# reference screen. On a narrower phone in portrait (the common case),
+	# using those fixed pixel values verbatim made the top-center combo
+	# panel and top-right timer panel mathematically overlap (their edges
+	# crossed on anything narrower than 860px - which is most phones).
+	# `s` scales every size/offset down together so the three top clusters
+	# always sit side-by-side without overlapping, and text never balloons
+	# past what a narrow screen can hold.
+	const REFERENCE_WIDTH := 860.0
+	var s: float = clamp(screen.x / REFERENCE_WIDTH, 0.55, 1.0)
+
 	# --- TOP LEFT: SCORE CLUSTER ---
-	highscore_label.add_theme_font_size_override("font_size", 20)
+	highscore_label.add_theme_font_size_override("font_size", roundi(20 * s))
 	highscore_label.modulate = Color(0.75, 0.75, 0.75)
 	highscore_label.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
-	highscore_label.position = Vector2(46, 24)
-	highscore_label.size = Vector2(240, 26)
+	highscore_label.position = Vector2(46 * s, 24 * s)
+	highscore_label.size = Vector2(240 * s, 26 * s)
 	highscore_label.clip_text = false
 
-	score_label.add_theme_font_size_override("font_size", 40)
+	score_label.add_theme_font_size_override("font_size", roundi(40 * s))
 	score_label.modulate = Color.WHITE
 	score_label.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
-	score_label.position = Vector2(46, 54)
+	score_label.position = Vector2(46 * s, 54 * s)
 
+	var topleft_w: float = 280 * s
 	_panel_topleft.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
-	_panel_topleft.position = Vector2(24, 12)
-	_panel_topleft.size = Vector2(280, 108) # roomy padding so text never clips
+	_panel_topleft.position = Vector2(24 * s, 12 * s)
+	_panel_topleft.size = Vector2(topleft_w, 108 * s) # roomy padding so text never clips
 
 	# --- TOP CENTER: STATUS CLUSTER ---
-	combo_label.add_theme_font_size_override("font_size", 28)
+	var topcenter_w: float = 340 * s
+	combo_label.add_theme_font_size_override("font_size", roundi(28 * s))
 	combo_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
-	combo_label.position = Vector2((screen.x / 2) - 150, 30)
+	combo_label.position = Vector2((screen.x / 2) - (topcenter_w / 2) + (20 * s), 30 * s)
 
-	_combo_bar.position = Vector2((screen.x / 2) - 140, 66)
+	_combo_bar.position = Vector2((screen.x / 2) - (topcenter_w / 2) + (30 * s), 66 * s)
 
 	_panel_topcenter.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
-	_panel_topcenter.position = Vector2((screen.x / 2) - 170, 12)
-	_panel_topcenter.size = Vector2(340, 78)
+	_panel_topcenter.position = Vector2((screen.x / 2) - (topcenter_w / 2), 12 * s)
+	_panel_topcenter.size = Vector2(topcenter_w, 78 * s)
 
 	# --- TOP RIGHT: TIMER CLUSTER ---
-	time_label.add_theme_font_size_override("font_size", 40)
+	var topright_w: float = 236 * s
+	time_label.add_theme_font_size_override("font_size", roundi(40 * s))
 	time_label.modulate = Color(1.0, 0.4, 0.4)
 	time_label.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
-	time_label.position = Vector2(screen.x - 220, 30)
+	time_label.position = Vector2(screen.x - topright_w - (20 * s), 30 * s)
 
-	_time_warning_icon.position = Vector2(screen.x - 250, 26)
+	_time_warning_icon.position = Vector2(screen.x - topright_w - (10 * s), 26 * s)
 
 	_panel_topright.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
-	_panel_topright.position = Vector2(screen.x - 260, 12)
-	_panel_topright.size = Vector2(236, 78)
+	_panel_topright.position = Vector2(screen.x - topright_w - (24 * s), 12 * s)
+	_panel_topright.size = Vector2(topright_w, 78 * s)
 
 	# --- BOTTOM LEFT: LIVES CLUSTER ---
 	lives_label.visible = false # replaced by drawn heart row (addition 1)
-	_heart_row.position = Vector2(20, screen.y - 70)
+	_heart_row.position = Vector2(20 * s, screen.y - (70 * s))
 
 	_panel_bottomleft.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
-	_panel_bottomleft.position = Vector2(24, screen.y - 96)
-	_panel_bottomleft.size = Vector2(260, 78)
+	_panel_bottomleft.position = Vector2(24 * s, screen.y - (96 * s))
+	_panel_bottomleft.size = Vector2(260 * s, 78 * s)
 
 	# --- BOTTOM RIGHT: PERFORMANCE CLUSTER ---
+	var bottomright_w: float = 296 * s
 	wpm_label.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
-	wpm_label.position = Vector2(screen.x - 300, screen.y - 100)
+	wpm_label.position = Vector2(screen.x - bottomright_w + (4 * s), screen.y - (100 * s))
 
-	_wpm_graph.position = Vector2(screen.x - 300, screen.y - 68)
+	_wpm_graph.position = Vector2(screen.x - bottomright_w + (4 * s), screen.y - (68 * s))
 
 	accuracy_label.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
-	accuracy_label.position = Vector2(screen.x - 300, screen.y - 34)
+	accuracy_label.position = Vector2(screen.x - bottomright_w + (4 * s), screen.y - (34 * s))
 
-	_accuracy_gauge.position = Vector2(screen.x - 68, screen.y - 40)
+	_accuracy_gauge.position = Vector2(screen.x - (68 * s), screen.y - (40 * s))
 
 	_panel_bottomright.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
-	_panel_bottomright.position = Vector2(screen.x - 320, screen.y - 112)
-	_panel_bottomright.size = Vector2(296, 96)
+	_panel_bottomright.position = Vector2(screen.x - bottomright_w - (24 * s), screen.y - (112 * s))
+	_panel_bottomright.size = Vector2(bottomright_w, 96 * s)
 
 	# --- misc floating elements ---
-	_streak_badge.position = Vector2((screen.x / 2) - 60, 96)
-	_pause_dot.position = Vector2(90, 8)
+	_streak_badge.position = Vector2((screen.x / 2) - (60 * s), 96 * s)
+	_pause_dot.position = Vector2(90 * s, 8 * s)
 
 	_update_corner_frame()
 	_reposition_ambient_particles()
