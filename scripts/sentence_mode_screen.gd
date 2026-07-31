@@ -80,14 +80,14 @@ func _build_ui() -> void:
 	title.text = LocalizationManager.get_string("sentence_mode", _game_state.selected_language).to_upper()
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 32)
-	title.modulate = COL_MINT
+	title.modulate = JellyTheme.text_color(COL_MINT)
 	vbox.add_child(title)
 
 	var subtitle = Label.new()
 	subtitle.text = LocalizationManager.get_string("sentence_mode_subtitle", _game_state.selected_language)
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	subtitle.add_theme_font_size_override("font_size", 14)
-	subtitle.modulate = COL_MUTE
+	subtitle.modulate = JellyTheme.text_color(COL_MUTE)
 	vbox.add_child(subtitle)
 
 	_sentence_label = Label.new()
@@ -108,7 +108,7 @@ func _build_ui() -> void:
 	_result_label = Label.new()
 	_result_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_result_label.add_theme_font_size_override("font_size", 18)
-	_result_label.modulate = COL_GOLD
+	_result_label.modulate = JellyTheme.text_color(COL_GOLD)
 	vbox.add_child(_result_label)
 
 	var button_row = HBoxContainer.new()
@@ -176,7 +176,7 @@ func _finish_sentence() -> void:
 	var word_count = SentenceBank.standard_word_count(_current_sentence)
 	var wpm = word_count / elapsed_min
 	_result_label.text = LocalizationManager.get_string("sentence_result", _game_state.selected_language) % wpm
-	_result_label.modulate = COL_GOLD
+	_result_label.modulate = JellyTheme.text_color(COL_GOLD)
 	if is_instance_valid(_game_state):
 		# Tracks lifetime sentence count (for the new sentence-practice
 		# missions) and only ever raises best_wpm, never lowers it -
