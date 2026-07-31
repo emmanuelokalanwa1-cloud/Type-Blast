@@ -91,6 +91,15 @@ var current_streak := 0
 var longest_streak := 0
 var last_play_date := ""
 
+# --- new: streak freeze (Daily Challenge feature). Earned automatically
+# every STREAK_FREEZE_EVERY_DAYS-day streak milestone; update_streak()
+# spends one to absorb a single missed day instead of resetting the
+# streak to 0. streak_freeze_last_milestone just prevents re-granting a
+# token for a milestone that's already been paid out. ---
+const STREAK_FREEZE_EVERY_DAYS := 7
+var streak_freeze_tokens := 0
+var streak_freeze_last_milestone := 0
+
 # --- new: cross-run pool of words you've missed, for "Drill My Mistakes".
 # Capped at 100, oldest dropped first, no duplicates. ---
 var missed_words_persistent: Array = []
@@ -373,6 +382,8 @@ func save_data() -> void:
 	cfg.set_value("extra", "current_streak", current_streak)
 	cfg.set_value("extra", "longest_streak", longest_streak)
 	cfg.set_value("extra", "last_play_date", last_play_date)
+	cfg.set_value("extra", "streak_freeze_tokens", streak_freeze_tokens)
+	cfg.set_value("extra", "streak_freeze_last_milestone", streak_freeze_last_milestone)
 	cfg.set_value("extra", "missed_words_persistent", missed_words_persistent)
 	cfg.set_value("extra", "unlocked_badges", unlocked_badges)
 	cfg.set_value("extra", "selected_language", selected_language)
@@ -456,6 +467,8 @@ func load_save_data() -> void:
 	current_streak = cfg.get_value("extra", "current_streak", 0)
 	longest_streak = cfg.get_value("extra", "longest_streak", 0)
 	last_play_date = cfg.get_value("extra", "last_play_date", "")
+	streak_freeze_tokens = cfg.get_value("extra", "streak_freeze_tokens", 0)
+	streak_freeze_last_milestone = cfg.get_value("extra", "streak_freeze_last_milestone", 0)
 	missed_words_persistent = cfg.get_value("extra", "missed_words_persistent", [])
 	unlocked_badges = cfg.get_value("extra", "unlocked_badges", [])
 	selected_language = cfg.get_value("extra", "selected_language", "en")
@@ -522,6 +535,8 @@ func reset_all_progress() -> void:
 	current_streak = 0
 	longest_streak = 0
 	last_play_date = ""
+	streak_freeze_tokens = 0
+	streak_freeze_last_milestone = 0
 	missed_words_persistent = []
 	unlocked_badges = []
 	daily_challenge_date = ""
@@ -583,12 +598,31 @@ func update_streak() -> void:
 	var yesterday := Time.get_date_string_from_unix_time(int(Time.get_unix_time_from_system()) - 86400).substr(0, 10)
 	if last_play_date == yesterday:
 		current_streak += 1
+	elif last_play_date != "" and streak_freeze_tokens > 0:
+		# Streak freeze: absorbs exactly ONE missed day (spends one
+		# token) instead of resetting to 0. Only covers a single-day
+		# gap - a 2+ day lapse still breaks the streak even with a
+		# token available, so it can't be stretched to skip a whole
+		# week indefinitely.
+		streak_freeze_tokens -= 1
+		current_streak += 1
 	else:
 		current_streak = 1
 	last_play_date = today
 	if current_streak > longest_streak:
 		longest_streak = current_streak
+	_maybe_award_streak_freeze()
 	save_data()
+
+## Grants one streak-freeze token per fresh STREAK_FREEZE_EVERY_DAYS-day
+## milestone reached (7, 14, 21, ...). streak_freeze_last_milestone stops
+## a milestone that's already been paid out from granting a second token
+## if update_streak() somehow runs again at the same streak length.
+func _maybe_award_streak_freeze() -> void:
+	var milestone := current_streak / STREAK_FREEZE_EVERY_DAYS
+	if milestone > streak_freeze_last_milestone:
+		streak_freeze_tokens += (milestone - streak_freeze_last_milestone)
+		streak_freeze_last_milestone = milestone
 
 ## Called by SentenceModeScreen each time a sentence is completed. Tracks
 ## the lifetime count (for missions) and lets sentence practice contribute
