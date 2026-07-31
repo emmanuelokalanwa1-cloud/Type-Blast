@@ -510,7 +510,17 @@ func _layout_labels() -> void:
 	# always sit side-by-side without overlapping, and text never balloons
 	# past what a narrow screen can hold.
 	const REFERENCE_WIDTH := 860.0
-	var s: float = clamp(screen.x / REFERENCE_WIDTH, 0.55, 1.0)
+	# ORIENTATION FIX: `s` used to only react to width. That's fine in
+	# portrait (width is always the tight dimension), but in landscape the
+	# HEIGHT becomes the tight one - a short landscape screen has much less
+	# vertical room between the top clusters and bottom clusters than a
+	# tall portrait screen does, even at the same width. Reference height
+	# is the shortest landscape height this is designed to still fit
+	# without the top/bottom clusters closing in on each other.
+	const REFERENCE_HEIGHT := 480.0
+	var s_w: float = clamp(screen.x / REFERENCE_WIDTH, 0.55, 1.0)
+	var s_h: float = clamp(screen.y / REFERENCE_HEIGHT, 0.55, 1.0)
+	var s: float = min(s_w, s_h)
 
 	# Curved-edge / punch-hole phones can have the real safe-drawing area
 	# inset from the left and/or right of the reported viewport. Only the
