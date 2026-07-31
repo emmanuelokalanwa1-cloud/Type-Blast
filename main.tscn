@@ -11,7 +11,7 @@
 [ext_resource type="AudioStream" uid="uid://ba1d5tv25nn58" path="res://audio/items/quick_win.wav" id="9_notif"]
 [ext_resource type="AudioStream" uid="uid://c8yx0lms2klr3" path="res://audio/items/game_over_voice.ogg" id="10_dg77c"]
 [ext_resource type="AudioStream" uid="uid://bfsko1aov5yuf" path="res://audio/KEY_PRESS_009.wav" id="10_efxa6"]
-[ext_resource type="AudioStream" uid="uid://jgmlh6r7eunc" path="res://audio/items/click.wav" id="8_click"]
+[ext_resource type="AudioStream" uid="uid://jgmlh6r7eunc" path="res://audio/items/click.wav" id="12_click2"]
 [node name="Main" type="Control" unique_id=1244155316]
 z_index = -10
 layout_mode = 3
