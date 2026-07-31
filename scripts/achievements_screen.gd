@@ -79,7 +79,7 @@ func _build_ui() -> void:
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 38)
 	if GameFonts.bold(): title.add_theme_font_override("font", GameFonts.bold())
-	title.modulate = COL_GOLD
+	title.modulate = JellyTheme.text_color(COL_GOLD)
 	outer_vbox.add_child(title)
 
 	_add_trophy_banner(outer_vbox)
@@ -87,7 +87,7 @@ func _build_ui() -> void:
 	_progress_label = Label.new()
 	_progress_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_progress_label.add_theme_font_size_override("font_size", 17)
-	_progress_label.modulate = COL_MUTE
+	_progress_label.modulate = JellyTheme.text_color(COL_MUTE)
 	outer_vbox.add_child(_progress_label)
 
 	var divider := ColorRect.new()
@@ -170,7 +170,7 @@ func _rebuild_list() -> void:
 	var records_header = Label.new()
 	records_header.text = LocalizationManager.get_string("full_record_log", _game_state.selected_language).to_upper()
 	records_header.add_theme_font_size_override("font_size", 15)
-	records_header.modulate = Color(1, 1, 1, 0.35)
+	records_header.modulate = JellyTheme.text_color(Color(1, 1, 1, 0.35))
 	_list_vbox.add_child(records_header)
 
 	var categories := {}
@@ -186,7 +186,7 @@ func _rebuild_list() -> void:
 		var empty = Label.new()
 		empty.text = LocalizationManager.get_string("no_achievements_data", _game_state.selected_language)
 		empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		empty.modulate = COL_MUTE
+		empty.modulate = JellyTheme.text_color(COL_MUTE)
 		_list_vbox.add_child(empty)
 		return
 
@@ -194,7 +194,7 @@ func _rebuild_list() -> void:
 		var header = Label.new()
 		header.text = String(cat).to_upper()
 		header.add_theme_font_size_override("font_size", 18)
-		header.modulate = COL_MINT
+		header.modulate = JellyTheme.text_color(COL_MINT)
 		_list_vbox.add_child(header)
 
 		for a in categories[cat]:
@@ -210,7 +210,7 @@ func _build_badges_strip() -> Control:
 	var header = Label.new()
 	header.text = LocalizationManager.get_string("milestone_badges", _game_state.selected_language).to_upper()
 	header.add_theme_font_size_override("font_size", 15)
-	header.modulate = Color(1, 1, 1, 0.35)
+	header.modulate = JellyTheme.text_color(Color(1, 1, 1, 0.35))
 	section_wrap.add_child(header)
 
 	var grid = GridContainer.new()
@@ -254,7 +254,7 @@ func _build_row(a: Dictionary, is_unlocked: bool) -> Control:
 	else:
 		var icon = Label.new()
 		icon.text = "★" if is_unlocked else "○"
-		icon.modulate = COL_GOLD if is_unlocked else COL_LOCK
+		icon.modulate = JellyTheme.text_color(COL_GOLD) if is_unlocked else JellyTheme.text_color(COL_LOCK)
 		icon.add_theme_font_size_override("font_size", 20)
 		hbox.add_child(icon)
 
@@ -265,13 +265,13 @@ func _build_row(a: Dictionary, is_unlocked: bool) -> Control:
 	var title_label = Label.new()
 	title_label.text = String(a.get("title", ""))
 	title_label.add_theme_font_size_override("font_size", 19)
-	title_label.modulate = Color.WHITE if is_unlocked else COL_LOCK
+	title_label.modulate = JellyTheme.text_color(Color.WHITE) if is_unlocked else JellyTheme.text_color(COL_LOCK)
 	text_vbox.add_child(title_label)
 
 	var desc_label = Label.new()
 	desc_label.text = String(a.get("description", ""))
 	desc_label.add_theme_font_size_override("font_size", 16)
-	desc_label.modulate = COL_MUTE if is_unlocked else COL_LOCK
+	desc_label.modulate = JellyTheme.text_color(COL_MUTE) if is_unlocked else JellyTheme.text_color(COL_LOCK)
 	desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 	text_vbox.add_child(desc_label)
 
