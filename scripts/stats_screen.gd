@@ -157,7 +157,7 @@ func _build_aaa_layout() -> void:
 	_subtitle_label = Label.new()
 	_subtitle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_subtitle_label.add_theme_font_size_override("font_size", 16)
-	_subtitle_label.modulate = COL_MUTE
+	_subtitle_label.modulate = JellyTheme.text_color(COL_MUTE)
 	left_vbox.add_child(_subtitle_label)
 
 	# 6. Grade badge (S/A/B/C/D) as a small pill
@@ -166,7 +166,7 @@ func _build_aaa_layout() -> void:
 	grade_wrap.add_theme_stylebox_override("panel", grade_style)
 	_grade_label = Label.new()
 	_grade_label.add_theme_font_size_override("font_size", 18)
-	_grade_label.add_theme_color_override("font_color", Color(0.06, 0.18, 0.08, 1.0))
+	_grade_label.add_theme_color_override("font_color", Color(1, 1, 1, 1))  # identity base - actual color comes from the modulate tint below, which is theme-adaptive
 	_grade_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	grade_wrap.add_child(_grade_label)
 	left_vbox.add_child(grade_wrap)
@@ -239,7 +239,7 @@ func _build_aaa_layout() -> void:
 	review_title.text = LocalizationManager.get_string("performance_review", _game_state.selected_language).to_upper()
 	review_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	review_title.add_theme_font_size_override("font_size", 15)
-	review_title.modulate = COL_MUTE
+	review_title.modulate = JellyTheme.text_color(COL_MUTE)
 	review_vbox.add_child(review_title)
 
 	var divider2 := ColorRect.new()
@@ -268,7 +268,7 @@ func _build_aaa_layout() -> void:
 	settings_title.text = LocalizationManager.get_string("quick_config", _game_state.selected_language).to_upper()
 	settings_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	settings_title.add_theme_font_size_override("font_size", 24)
-	settings_title.modulate = COL_GOLD
+	settings_title.modulate = JellyTheme.text_color(COL_GOLD)
 	right_vbox.add_child(settings_title)
 
 	var divider3 := ColorRect.new()
@@ -347,7 +347,7 @@ func _build_aaa_layout() -> void:
 	_hint_label.text = LocalizationManager.get_string("hint_play_again_menu", _game_state.selected_language)
 	_hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_hint_label.add_theme_font_size_override("font_size", 13)
-	_hint_label.modulate = Color(1, 1, 1, 0.3)
+	_hint_label.modulate = JellyTheme.text_color(Color(1, 1, 1, 0.3))
 	card_vbox.add_child(_hint_label)
 
 	# 19. Post-run "fortune cookie" — a small random motivational line pulled
@@ -358,7 +358,7 @@ func _build_aaa_layout() -> void:
 	fortune_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	fortune_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 	fortune_label.add_theme_font_size_override("font_size", 13)
-	fortune_label.modulate = Color(1.0, 0.85, 0.4, 0.0)
+	fortune_label.modulate = JellyTheme.text_color(Color(1.0, 0.85, 0.4, 0.0))
 	card_vbox.add_child(fortune_label)
 	var fortune_tween := create_tween()
 	fortune_tween.tween_interval(0.4)
@@ -371,7 +371,7 @@ func _build_aaa_layout() -> void:
 		var mascot_label := Label.new()
 		mascot_label.text = "👀 psst... nice typing!"
 		mascot_label.add_theme_font_size_override("font_size", 12)
-		mascot_label.modulate = Color(1, 1, 1, 0.0)
+		mascot_label.modulate = JellyTheme.text_color(Color(1, 1, 1, 0.0))
 		mascot_label.z_index = 5
 		_card.add_child(mascot_label)
 		mascot_label.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
@@ -398,7 +398,7 @@ func _pct_label(v: float) -> Label:
 	l.text = "%d%%" % int(round(v * 100))
 	l.add_theme_font_size_override("font_size", 15)
 	l.custom_minimum_size = Vector2(42, 0)
-	l.modulate = COL_MUTE
+	l.modulate = JellyTheme.text_color(COL_MUTE)
 	return l
 
 
@@ -483,7 +483,7 @@ func show_game_over() -> void:
 	_last_result_was_win = false
 	var gs = _game_state
 	final_score_label.text = LocalizationManager.get_string("run_failed", _game_state.selected_language).to_upper()
-	final_score_label.modulate = COL_RED
+	final_score_label.modulate = JellyTheme.text_color(COL_RED)
 	_subtitle_label.text = "%s: %d" % [LocalizationManager.get_string("score", _game_state.selected_language).to_upper(), gs.score]
 	_accent_bar.color = COL_RED
 	_render_stats(gs.get_wpm(), gs.get_accuracy())
@@ -495,7 +495,7 @@ func show_win() -> void:
 	_last_result_was_win = true
 	var gs = _game_state
 	final_score_label.text = LocalizationManager.get_string("run_complete", _game_state.selected_language).to_upper()
-	final_score_label.modulate = COL_GOLD
+	final_score_label.modulate = JellyTheme.text_color(COL_GOLD)
 	_subtitle_label.text = "%s: %d" % [LocalizationManager.get_string("score", _game_state.selected_language).to_upper(), gs.score]
 	_accent_bar.color = COL_GOLD
 	_render_stats(gs.get_wpm(), gs.get_accuracy())
@@ -542,7 +542,7 @@ func _render_stats(wpm: float, acc: float) -> void:
 		flawless_label.text = "🔥 FLAWLESS! 🔥"
 		flawless_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		flawless_label.add_theme_font_size_override("font_size", 22)
-		flawless_label.modulate = Color(1.0, 0.35, 0.15, 0.0)
+		flawless_label.modulate = JellyTheme.text_color(Color(1.0, 0.35, 0.15, 0.0))
 		flawless_label.scale = Vector2(1.4, 1.4)
 		flawless_label.pivot_offset = Vector2(flawless_label.size.x / 2.0, flawless_label.size.y / 2.0)
 		_card.add_child(flawless_label)
@@ -568,7 +568,7 @@ func _render_stats(wpm: float, acc: float) -> void:
 	elif acc >= 50:
 		grade = "C"; grade_color = Color(0.85, 0.7, 0.3)
 	_grade_label.text = "%s  %s" % [LocalizationManager.get_string("rank_label", _game_state.selected_language).to_upper(), grade]
-	_grade_label.modulate = grade_color
+	_grade_label.modulate = JellyTheme.text_color(grade_color)
 
 	if is_new_best and wpm > 0:
 		if not _new_best_label:
@@ -577,7 +577,7 @@ func _render_stats(wpm: float, acc: float) -> void:
 			_new_best_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			_stats_label.get_parent().add_child(_new_best_label)
 		_new_best_label.text = LocalizationManager.get_string("new_best", _game_state.selected_language).to_upper()
-		_new_best_label.modulate = COL_GOLD
+		_new_best_label.modulate = JellyTheme.text_color(COL_GOLD)
 		_new_best_label.visible = true
 		# 22. Pulsing glow loop on the new-best tag
 		var pulse := create_tween()
@@ -604,7 +604,7 @@ func _render_stats(wpm: float, acc: float) -> void:
 		var perfect := Label.new()
 		perfect.text = LocalizationManager.get_string("perfect_run", _game_state.selected_language)
 		perfect.add_theme_font_size_override("font_size", 16)
-		perfect.modulate = COL_GOLD
+		perfect.modulate = JellyTheme.text_color(COL_GOLD)
 		_chips_row.add_child(perfect)
 	else:
 		var shown = gs.missed_words.slice(0, min(6, gs.missed_words.size()))
@@ -630,7 +630,7 @@ func _make_chip(txt: String) -> PanelContainer:
 	var l := Label.new()
 	l.text = txt
 	l.add_theme_font_size_override("font_size", 15)
-	l.modulate = Color(0.95, 0.6, 0.6)
+	l.modulate = JellyTheme.text_color(Color(0.95, 0.6, 0.6))
 	chip.add_child(l)
 	return chip
 
@@ -640,5 +640,5 @@ func _sub_labeled(txt: String) -> Label:
 	l.text = txt
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.add_theme_font_size_override("font_size", 15)
-	l.modulate = Color(1, 1, 1, 0.65)
+	l.modulate = JellyTheme.text_color(Color(1, 1, 1, 0.65))
 	return l
