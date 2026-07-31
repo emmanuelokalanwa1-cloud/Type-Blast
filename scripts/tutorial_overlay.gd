@@ -62,6 +62,7 @@ var _next_pulse_tween: Tween
 var _drag_start_x := -1.0
 
 var _game_state: GameState
+var _theme_keep_child_count := 0  # children added before the first _build_ui() call, preserved across refresh_theme()
 
 
 ## The card behind this overlay is JellyTheme.panel_style("popup") - a flat
@@ -86,8 +87,28 @@ func setup(root: Control, game_state: GameState) -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	root.add_child(self)
 	_build_vignette_background() # 1
+	_theme_keep_child_count = get_child_count()
 	_build_ui()
 	_render_page(false)
+
+## Re-runs _build_ui() so the tutorial reskins immediately if the player
+## changes the interface style in More > Settings and then reopens it via
+## "Replay Tutorial" - previously this screen (like Dictation) was only
+## ever built once at boot and wasn't wired into
+## GameState.ui_style_changed, so it kept showing whatever style was
+## active at app launch until a full restart. That's what made a style
+## switch look "unfinished" if you left and came back into this screen
+## before relaunching the app.
+func refresh_theme() -> void:
+	var was_open := visible
+	var page_before := _page_index
+	JellyTheme.trim_rebuildable_children(self, _theme_keep_child_count)
+	_build_ui()
+	_page_index = clamp(page_before, 0, PAGES.size() - 1)
+	_render_page(false)
+	visible = was_open
+	if was_open and is_instance_valid(_card):
+		JellyTheme.play_rebuild_transition(_card)
 
 
 # 1. Same radial vignette used by StatsScreen/DifficultyMenu for a
