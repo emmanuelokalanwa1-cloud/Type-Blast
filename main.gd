@@ -690,6 +690,13 @@ func _on_ui_style_changed(_new_style: String) -> void:
 	if is_instance_valid(achievements_screen): achievements_screen.refresh_theme()
 	if is_instance_valid(sentence_mode_screen): sentence_mode_screen.refresh_theme()
 	if is_instance_valid(ui_hud): ui_hud.refresh_theme()
+	# FIX: these two were built once at boot like every screen above, but
+	# were never wired into ui_style_changed - they kept showing whatever
+	# style was active at app launch until a full relaunch. That's what
+	# made a style switch look "stuck"/incomplete if you opened Dictation
+	# or replayed the Tutorial in the same session instead of restarting.
+	if is_instance_valid(dictation_screen): dictation_screen.refresh_theme()
+	if is_instance_valid(tutorial_overlay): tutorial_overlay.refresh_theme()
 	# more_screen rebuilds its own currently-open Settings panel itself,
 	# at the point of selection - see more_screen.gd.
 
@@ -742,8 +749,6 @@ func _on_career_rank_selected(rank: int) -> void:
 func _start_game() -> void:
 	word_manager.clear_words()
 	powerup_system.reset()
-	game_state.running = true
-	game_state.is_paused = false
 	spawn_timer = 0.0
 	base_fall_speed = 40.0
 	career_fall_speed_bonus = career_manager.get_fall_speed_bonus() if is_instance_valid(career_manager) else 0.0
@@ -1128,6 +1133,8 @@ func _on_restart_pressed() -> void:
 	is_transitioning = false
 	await get_tree().process_frame
 	_start_game()
+	game_state.is_paused = false
+	game_state.running = true
 
 func _on_menu_pressed() -> void:
 	result_panel.visible = false
