@@ -30,6 +30,7 @@ var _close_btn: Button
 var _current_sentence := ""
 var _revealed := false
 var _rng := RandomNumberGenerator.new()
+var _theme_keep_child_count := 0  # children added before the first _build_ui() call, preserved across refresh_theme()
 
 func setup(root: Control, game_state: GameState) -> void:
 	_game_state = game_state
@@ -39,7 +40,29 @@ func setup(root: Control, game_state: GameState) -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	visible = false
 	root.add_child(self)
+	_theme_keep_child_count = get_child_count()
 	_build_ui()
+
+## Re-runs _build_ui() so this screen picks up a new Casual/Jelly/Arcade
+## interface style immediately instead of staying on whatever skin was
+## active when the app booted. This screen (like Tutorial) used to be
+## built once at startup and never wired into GameState.ui_style_changed,
+## so changing the style in More > Settings and then opening Dictation
+## Mode in the same session showed the OLD skin - the style only "finished"
+## applying here once the app was fully closed and relaunched, which is
+## what looked like a stuck/incomplete theme switch.
+func refresh_theme() -> void:
+	var was_open := visible
+	if DisplayServer.tts_is_speaking():
+		DisplayServer.tts_stop()
+	JellyTheme.trim_rebuildable_children(self, _theme_keep_child_count)
+	_build_ui()
+	# Restore whatever was on screen instead of blanking mid-session -
+	# _load_new_passage() would otherwise wipe an in-progress attempt.
+	_status_label.text = _current_sentence if _revealed else "🔊 Listen carefully..."
+	visible = was_open
+	if was_open:
+		JellyTheme.play_rebuild_transition(self)
 
 func _build_ui() -> void:
 	var vp = get_viewport_rect().size
@@ -67,21 +90,21 @@ func _build_ui() -> void:
 	title.text = "DICTATION MODE"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 32)
-	title.modulate = COL_MINT
+	title.modulate = JellyTheme.text_color(COL_MINT)
 	vbox.add_child(title)
 
 	var subtitle = Label.new()
 	subtitle.text = "Listen, then type exactly what you heard. No peeking!"
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	subtitle.add_theme_font_size_override("font_size", 14)
-	subtitle.modulate = COL_MUTE
+	subtitle.modulate = JellyTheme.text_color(COL_MUTE)
 	vbox.add_child(subtitle)
 
 	_status_label = Label.new()
 	_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 	_status_label.add_theme_font_size_override("font_size", 22)
-	_status_label.modulate = COL_SKY
+	_status_label.modulate = JellyTheme.text_color(COL_SKY)
 	vbox.add_child(_status_label)
 
 	_input_edit = LineEdit.new()
@@ -96,7 +119,7 @@ func _build_ui() -> void:
 	_result_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_result_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 	_result_label.add_theme_font_size_override("font_size", 18)
-	_result_label.modulate = COL_GOLD
+	_result_label.modulate = JellyTheme.text_color(COL_GOLD)
 	vbox.add_child(_result_label)
 
 	var button_row = HBoxContainer.new()
@@ -164,11 +187,11 @@ func _on_text_submitted(new_text: String) -> void:
 	var correct := new_text.strip_edges() == _current_sentence.strip_edges()
 	if correct:
 		_result_label.text = "✅ Correct! Nice listening."
-		_result_label.modulate = COL_MINT
+		_result_label.modulate = JellyTheme.text_color(COL_MINT)
 		_input_edit.modulate = COL_MINT
 	else:
 		_result_label.text = "Not quite. Try REPLAY, or REVEAL to check."
-		_result_label.modulate = COL_RED
+		_result_label.modulate = JellyTheme.text_color(COL_RED)
 		_input_edit.modulate = COL_RED
 
 func _unhandled_input(event: InputEvent) -> void:
