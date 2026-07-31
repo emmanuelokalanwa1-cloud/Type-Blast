@@ -220,7 +220,7 @@ func _build_ui() -> void:
 	_title.text = LocalizationManager.get_string("paused", _game_state.selected_language).to_upper()
 	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_title.add_theme_font_size_override("font_size", 56)
-	_title.modulate = Color.GOLD
+	_title.modulate = JellyTheme.text_color(Color.GOLD)
 	banner_wrap.add_child(_title)
 	banner_wrap.add_child(_header_banner)
 
@@ -228,14 +228,14 @@ func _build_ui() -> void:
 	_subtitle = Label.new()
 	_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_subtitle.add_theme_font_size_override("font_size", 18)
-	_subtitle.modulate = Color(1, 1, 1, 0.6)
+	_subtitle.modulate = JellyTheme.text_color(Color(1, 1, 1, 0.6))
 	vbox.add_child(_subtitle)
 
 	# 6. Live run-stats readout.
 	_stats_label = Label.new()
 	_stats_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_stats_label.add_theme_font_size_override("font_size", 20)
-	_stats_label.modulate = Color(0.6, 1.0, 0.8)
+	_stats_label.modulate = JellyTheme.text_color(Color(0.6, 1.0, 0.8))
 	vbox.add_child(_stats_label)
 
 	vbox.add_child(HSeparator.new()) # 5
@@ -266,6 +266,7 @@ func _build_ui() -> void:
 	_music_pct.custom_minimum_size = Vector2(56, 0)
 	_music_pct.text = str(int(round(_game_state.music_volume * 100))) + "%"
 	_music_pct.add_theme_font_size_override("font_size", 18)
+	_music_pct.modulate = JellyTheme.text_color(Color.WHITE)
 	music_slider.value_changed.connect(func(v):
 		_audio.set_music_volume(v)
 		_music_pct.text = str(int(round(v * 100))) + "%" # 7
@@ -290,6 +291,7 @@ func _build_ui() -> void:
 	_sfx_pct.custom_minimum_size = Vector2(56, 0)
 	_sfx_pct.text = str(int(round(_game_state.sfx_volume * 100))) + "%"
 	_sfx_pct.add_theme_font_size_override("font_size", 18)
+	_sfx_pct.modulate = JellyTheme.text_color(Color.WHITE)
 	sfx_slider.value_changed.connect(func(v):
 		_audio.set_sfx_volume(v)
 		_sfx_pct.text = str(int(round(v * 100))) + "%" # 7
@@ -303,6 +305,7 @@ func _build_ui() -> void:
 	mute_check.button_pressed = _game_state.muted
 	mute_check.add_theme_font_size_override("font_size", 24)
 	mute_check.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	mute_check.add_theme_color_override("font_color", JellyTheme.base_control_text_color())
 	mute_check.modulate = Color(1.0, 0.6, 0.6) if _game_state.muted else Color.WHITE # 17
 	mute_check.toggled.connect(func(pressed):
 		_audio.set_muted(pressed)
@@ -315,6 +318,7 @@ func _build_ui() -> void:
 	reduced_motion_check.button_pressed = _game_state.reduced_motion
 	reduced_motion_check.add_theme_font_size_override("font_size", 24)
 	reduced_motion_check.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	reduced_motion_check.add_theme_color_override("font_color", JellyTheme.base_control_text_color())
 	reduced_motion_check.modulate = Color(0.6, 0.9, 1.0) if _game_state.reduced_motion else Color.WHITE
 	reduced_motion_check.toggled.connect(func(pressed):
 		_game_state.reduced_motion = pressed
@@ -377,6 +381,7 @@ func _labeled(txt: String) -> Label:
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	l.add_theme_font_size_override("font_size", 20)
+	l.modulate = JellyTheme.text_color(Color.WHITE)
 	return l
 
 func _on_quit_pressed() -> void:
@@ -401,7 +406,7 @@ func _process(delta: float) -> void:
 		return
 	_title_pulse_t += delta
 	var glow = 0.85 + sin(_title_pulse_t * 2.5) * 0.15
-	_title.modulate = Color(1.0, 0.84, 0.0) * glow
+	_title.modulate = JellyTheme.text_color(Color(1.0, 0.84, 0.0)) * glow
 
 	# E. Slow breathing glow on the card's border, alongside the title pulse.
 	_glow_pulse_t += delta
