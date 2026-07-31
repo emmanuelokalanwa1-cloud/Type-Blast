@@ -21,6 +21,24 @@ var _label_template: Label
 var _container: Node
 var _game_state: GameState
 
+# --- WORD REPEAT FIX --------------------------------------------------
+# spawn_word() used to call current_pool().pick_random() every time -
+# pure random, which can (and does) pick the same word again soon after,
+# no matter how large the pool actually is. Two separate fixes:
+#
+# 1. Shuffle-bag: instead of an independent random roll each spawn, shuffle
+#    a full copy of the current pool once and hand out words from it in
+#    order, only reshuffling once every word in that batch has been used.
+#    Guarantees no word repeats until everything else in the pool has come
+#    up at least once - the same trick the music shuffle uses.
+# 2. On-screen duplicate guard: separately, nothing stopped the exact same
+#    word from being spawned while an identical one was still falling,
+#    which reads as "it just repeated" even faster than the shuffle-bag
+#    issue. spawn_word() now rerolls (bounded) if the picked word is
+#    already active on screen.
+var _word_shuffle_queue: Array = []
+var _word_shuffle_pool_key: String = ""
+
 func setup(label_template: Label, container: Node, game_state: GameState) -> void:
 	_label_template = label_template
 	_container = container
@@ -43,6 +61,42 @@ func current_pool() -> Array:
 				return biased
 	return pool
 
+# Identifies which pool config the current shuffle bag was built from, so
+# switching theme/difficulty/weak-keys mid-session correctly starts a
+# fresh bag instead of handing out leftover words from the old pool.
+func _pool_key() -> String:
+	return "%s|%s|%s" % [_game_state.selected_theme, _game_state.selected_difficulty, _game_state.weak_keys_mode]
+
+func _pick_word_no_repeat(pool: Array) -> String:
+	if pool.is_empty():
+		return ""
+	var key := _pool_key()
+	if key != _word_shuffle_pool_key or _word_shuffle_queue.is_empty():
+		_word_shuffle_queue = pool.duplicate()
+		_word_shuffle_queue.shuffle()
+		_word_shuffle_pool_key = key
+	return _word_shuffle_queue.pop_back()
+
+func _is_word_currently_active(word: String) -> bool:
+	for label in active_words:
+		if is_instance_valid(label) and String(label.get_meta("word")) == word:
+			return true
+	return false
+
+# Pulls from the shuffle bag, and rerolls (bounded, so a very small or
+# heavily-filtered pool can't loop forever) if that word is already
+# falling on screen right now.
+func _pick_regular_word() -> String:
+	var pool := current_pool()
+	if pool.is_empty():
+		return "WORD"
+	var word := _pick_word_no_repeat(pool)
+	var attempts := 0
+	while _is_word_currently_active(word) and attempts < 6:
+		word = _pick_word_no_repeat(pool)
+		attempts += 1
+	return word
+
 func spawn_word(level: int) -> Label:
 	var new_label: Label = _label_template.duplicate()
 	_container.add_child(new_label)
@@ -61,7 +115,7 @@ func spawn_word(level: int) -> Label:
 		word_text = WordBank.BOSS_WORDS.pick_random()
 		random_color = Color.GOLD
 	else:
-		word_text = current_pool().pick_random()
+		word_text = _pick_regular_word()
 		random_color = word_colors.pick_random()
 
 	new_label.text = word_text
@@ -101,11 +155,23 @@ func spawn_word(level: int) -> Label:
 	return new_label
 
 func update_positions(delta: float, base_fall_speed: float, score: int, slow_mo_factor: float, screen_height: float) -> void:
+	# ORIENTATION FIX: fall speed used to be flat pixels/second, tuned
+	# against a ~1280px-tall portrait screen. Rotate to landscape (often
+	# only ~700-800px tall) and words covered half the distance in the
+	# same time - reaction time got cut roughly in half, which is what
+	# made landscape feel broken rather than just differently laid out.
+	# Scaling speed to the actual available height keeps fall TIME (not
+	# raw speed) roughly consistent across orientations. Clamped so a
+	# very tall screen can't make things slower than originally tuned,
+	# and a very short one can't make them unfairly fast.
+	const REFERENCE_FALL_HEIGHT := 1280.0
+	var fall_scale: float = clamp(screen_height / REFERENCE_FALL_HEIGHT, 0.45, 1.0)
+
 	for i in range(active_words.size() - 1, -1, -1):
 		var label = active_words[i]
 		if is_instance_valid(label):
 			var speed_mult = label.get_meta("speed_mult") if label.has_meta("speed_mult") else 1.0
-			var current_fall_speed = (base_fall_speed + (score * 0.05)) * slow_mo_factor * speed_mult
+			var current_fall_speed = (base_fall_speed + (score * 0.05)) * slow_mo_factor * speed_mult * fall_scale
 			label.position.y += current_fall_speed * delta
 			label.position.x += sin(label.position.y * 0.05) * 0.5
 			if label.position.y > screen_height - 180:
