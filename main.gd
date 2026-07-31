@@ -1,6 +1,6 @@
 extends Control
 
-## Main no longer owns gameplay logic itself â€” it just builds the
+## Main no longer owns gameplay logic itself — it just builds the
 ## sub-systems (each its own node/script under res://scripts/), wires their
 ## signals together, and drives the per-frame loop (spawning, falling,
 ## freeze/slow-mo, screen shake, level-up transitions).
@@ -27,7 +27,7 @@ extends Control
 ## fresh run opens, so no stale input state leaks between screens.
 ##
 ## 20 additive extras (all self-contained in this script, all guarded, none
-## call into other scripts' unknown methods â€” so this can't break anything):
+## call into other scripts' unknown methods — so this can't break anything):
 ##  1. Level-only fall-speed curve (the actual bug fix)
 ##  2. Soft-landing grace period at the start of every new level
 ##  3. Miss-streak rubber-band assist (eases spawn rate if you're struggling)
@@ -71,7 +71,7 @@ extends Control
 @onready var error_snd = get_node_or_null("ErrorPlayer")
 @onready var music_snd = get_node_or_null("MusicPlayer")
 
-# Bonus SFX pack + keystroke sound â€” now real scene nodes (see main.tscn)
+# Bonus SFX pack + keystroke sound — now real scene nodes (see main.tscn)
 # instead of being built from a hardcoded path in AudioManager. Change any
 # of these by clicking the node in the editor and dragging a new file onto
 # its Stream property; no script edit needed.
@@ -436,9 +436,7 @@ func _ready() -> void:
 	else:
 		tutorial_overlay.open()
 
-	_check_orientation_guard()
-
-## Daily Login Reward popup â€” separate from Daily Challenge and from
+## Daily Login Reward popup — separate from Daily Challenge and from
 ## Career/Achievements toasts. Fires at most once per calendar day, and
 ## only once tutorial_seen is true (first-ever launch shows the tutorial
 ## instead, so a brand new player doesn't get a reward popup for a streak
@@ -491,7 +489,7 @@ func _show_daily_login_popup(reward: Dictionary, newly_badges: Array, newly_miss
 	card.add_child(vb)
 
 	var title := Label.new()
-	title.text = "Ã°Å¸Å½ DAILY LOGIN REWARD"
+	title.text = "ðŸŽ DAILY LOGIN REWARD"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 22)
 	title.add_theme_color_override("font_color", Color(1.0, 0.78, 0.25))
@@ -724,7 +722,7 @@ func _on_quit_to_menu() -> void:
 func _on_tutorial_finished() -> void:
 	difficulty_menu.open()
 	# By this point the player has tapped NEXT/SKIP/GOT IT at least once,
-	# so _input() should already have set _audio_unlocked â€” but fall back
+	# so _input() should already have set _audio_unlocked — but fall back
 	# to the pending-music flag just in case, same as the tutorial_seen path.
 	if _audio_unlocked:
 		audio.play_menu_music()
@@ -1199,7 +1197,6 @@ func _on_app_focus_lost() -> void:
 		_toggle_pause()
 
 func _on_viewport_resized() -> void:
-	_check_orientation_guard()
 	if not is_instance_valid(input_box):
 		return
 	if mobile_support.is_touch:
@@ -1207,49 +1204,6 @@ func _on_viewport_resized() -> void:
 	else:
 		input_box.position.y = get_viewport_rect().size.y - 120
 	original_input_pos_y = input_box.position.y
-
-# --- ROTATE-GUARD EXTRA ------------------------------------------------------
-# The project should be locked to portrait in Project Settings > Display >
-# Window > Handheld > Orientation, which stops the OS from rotating at all.
-# This is a safety net for the devices/OEM skins that ignore that setting:
-# if the viewport ever reports landscape (width > height), auto-pause and
-# cover the screen with a "rotate back" message instead of letting the
-# portrait-tuned HUD/spawn math run against the wrong dimensions. Fully
-# self-contained - builds its own overlay node, doesn't touch main.tscn.
-var _rotate_guard: ColorRect
-
-func _ensure_rotate_guard() -> void:
-	if is_instance_valid(_rotate_guard):
-		return
-	_rotate_guard = ColorRect.new()
-	_rotate_guard.color = Color(0.02, 0.02, 0.03, 0.97)
-	_rotate_guard.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_rotate_guard.mouse_filter = Control.MOUSE_FILTER_STOP
-	_rotate_guard.z_index = 4096
-	_rotate_guard.visible = false
-
-	var lbl := Label.new()
-	lbl.text = "Please rotate your device back to portrait to keep playing"
-	lbl.add_theme_font_size_override("font_size", 28)
-	lbl.horizontal_alignment = HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER
-	lbl.vertical_alignment = VerticalAlignment.VERTICAL_ALIGNMENT_CENTER
-	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD
-	lbl.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	lbl.add_theme_constant_override("margin_left", 40)
-	lbl.add_theme_constant_override("margin_right", 40)
-	_rotate_guard.add_child(lbl)
-	add_child(_rotate_guard)
-
-func _check_orientation_guard() -> void:
-	_ensure_rotate_guard()
-	var size := get_viewport_rect().size
-	var is_landscape := size.x > size.y
-	if is_landscape and not _rotate_guard.visible:
-		_rotate_guard.visible = true
-		if game_state.running and not game_state.is_paused:
-			_toggle_pause()
-	elif not is_landscape and _rotate_guard.visible:
-		_rotate_guard.visible = false
 
 # --- PORTRAIT COMFORT EXTRA -------------------------------------------------
 # Modern phones in portrait reserve a strip at the bottom of the physical
