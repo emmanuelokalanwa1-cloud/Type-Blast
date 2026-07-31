@@ -142,6 +142,53 @@ static var current_style := "arcade"
 static func set_style(style: String) -> void:
 	current_style = style if style in STYLES else "arcade"
 
+## --- Cross-theme text contrast ------------------------------------------
+## Every screen's text colors (COL_GOLD, COL_MUTE, near-white labels, etc.)
+## were originally tuned by eye against Casual's near-black flat card. That
+## works fine in Casual, but Jelly's and Arcade's card/popup art (panel_card,
+## panel_popup, the arcade "windows" pack) are light cream/parchment-colored
+## textures - the same colors that read clearly on a dark card go washed-out
+## or near-invisible on those light panels. This is the one place that knows
+## the fix, so screens don't each need their own light/dark branch (only
+## more_screen.gd and tutorial_overlay.gd used to bother, and only for one
+## color each - everywhere else just quietly had bad contrast in Jelly/
+## Arcade).
+##
+## Casual is untouched (colors already tuned for it). Jelly/Arcade: convert
+## to HSV and pull the value down / nudge saturation up so it reads as ink
+## on a light surface instead of a pale wash, while keeping the same hue -
+## gold text is still recognizably gold, just a deeper ink-gold instead of
+## a pale gold that disappears into a cream panel. Alpha is preserved as-is.
+static func text_color(base_color: Color) -> Color:
+	if current_style == "casual":
+		return base_color
+	var h := base_color.h
+	var s := clamp(base_color.s * 1.2, 0.0, 1.0)
+	var v := clamp(base_color.v * 0.5, 0.0, 0.58)
+	var out := Color.from_hsv(h, s, v)
+	out.a = base_color.a
+	return out
+
+## Convenience for the very common "faint white caption" pattern
+## (Color(1,1,1,alpha)) that shows up on nearly every screen - same idea as
+## text_color() above but skips having to spell out Color(1,1,1,a) everywhere.
+static func mute_text_color(alpha: float = 0.55) -> Color:
+	return text_color(Color(1, 1, 1, alpha))
+
+## Default ink color for a Button/CheckButton/OptionButton that doesn't set
+## its own font_color override, so it's using the project theme's global
+## default (assets/fonts/game_theme.tres sets Button font_color dark, tuned
+## for Arcade's default light-grey button texture). That default is fine in
+## Arcade, but Casual's checks/toggles sit on CASUAL_BASE - a dark flat
+## navy - so the same dark-on-dark text disappears there. Call this once
+## when building a Button/CheckButton/OptionButton that relies on the theme
+## default rather than its own accent tint, so it flips light-on-dark for
+## Casual and stays dark-on-light for Jelly/Arcade.
+static func base_control_text_color() -> Color:
+	if current_style == "casual":
+		return Color(0.92, 0.92, 0.95, 1.0)
+	return Color(0.1, 0.1, 0.12, 1.0)
+
 ## Flat-style palette - deliberately plain/neutral so any per-screen tint
 ## still reads clearly on top of it (buttons multiply this by the caller's
 ## tint the same way the textured styles do via modulate_color).
