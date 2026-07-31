@@ -130,14 +130,14 @@ func _build_static_ui() -> void:
 	title.text = LocalizationManager.get_string("missions", _game_state.selected_language).to_upper()
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 52)
-	title.modulate = COL_GOLD
+	title.modulate = JellyTheme.text_color(COL_GOLD)
 	header_row.add_child(title)
 
 	# 16. Small corner tag showing total map count.
 	var map_count_tag = Label.new()
 	map_count_tag.name = "MapCountTag"
 	map_count_tag.add_theme_font_size_override("font_size", 17)
-	map_count_tag.modulate = Color(1, 1, 1, 0.4)
+	map_count_tag.modulate = JellyTheme.text_color(Color(1, 1, 1, 0.4))
 	map_count_tag.position = Vector2(0, 8)
 	map_count_tag.set_meta("is_map_count_tag", true)
 	outer_vbox.add_child(map_count_tag)
@@ -146,7 +146,7 @@ func _build_static_ui() -> void:
 	_progress_label = Label.new()
 	_progress_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_progress_label.add_theme_font_size_override("font_size", 18)
-	_progress_label.modulate = Color(1, 1, 1, 0.75)
+	_progress_label.modulate = JellyTheme.text_color(Color(1, 1, 1, 0.75))
 	outer_vbox.add_child(_progress_label)
 	_progress_fill = _make_progress_bar(outer_vbox)
 
@@ -155,7 +155,7 @@ func _build_static_ui() -> void:
 	_toast_label.text = LocalizationManager.get_string("progress_reset", _game_state.selected_language).to_upper()
 	_toast_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_toast_label.add_theme_font_size_override("font_size", 18)
-	_toast_label.modulate = Color(COL_GOLD.r, COL_GOLD.g, COL_GOLD.b, 0.0)
+	_toast_label.modulate = JellyTheme.text_color(Color(COL_GOLD.r, COL_GOLD.g, COL_GOLD.b, 0.0))
 	outer_vbox.add_child(_toast_label)
 
 	# 8. Live search filter.
@@ -263,7 +263,7 @@ func _rebuild_list() -> void:
 		var empty_label = Label.new()
 		empty_label.text = LocalizationManager.get_string("no_missions_yet", _game_state.selected_language)
 		empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		empty_label.modulate = COL_MUTE
+		empty_label.modulate = JellyTheme.text_color(COL_MUTE)
 		_list_vbox.add_child(empty_label)
 		if is_instance_valid(_progress_label):
 			_progress_label.text = ""
@@ -299,7 +299,7 @@ func _rebuild_list() -> void:
 		var header = Label.new()
 		header.text = "%s   (%d/%d)" % [map.name, done, map.missions.size()]
 		header.add_theme_font_size_override("font_size", 26)
-		header.modulate = COL_GOLD if map_complete else Color.WHITE
+		header.modulate = JellyTheme.text_color(COL_GOLD if map_complete else Color.WHITE)
 		header_row.add_child(header)
 
 		# 10. "★ COMPLETE" badge when a map hits 100%.
@@ -307,7 +307,7 @@ func _rebuild_list() -> void:
 			var badge = Label.new()
 			badge.text = "★ " + LocalizationManager.get_string("complete", _game_state.selected_language).to_upper()
 			badge.add_theme_font_size_override("font_size", 18)
-			badge.modulate = COL_GOLD
+			badge.modulate = JellyTheme.text_color(COL_GOLD)
 			header_row.add_child(badge)
 
 		_list_vbox.add_child(header_row)
@@ -347,7 +347,7 @@ func _rebuild_list() -> void:
 			var row = Label.new()
 			row.text = ("●  " if completed else "◻  ") + mission.text
 			row.add_theme_font_size_override("font_size", 20)
-			row.modulate = COL_GREEN if completed else COL_MUTE
+			row.modulate = JellyTheme.text_color(COL_GREEN if completed else COL_MUTE)
 			chip_wrap.add_child(row)
 			rows_container.add_child(chip_wrap)
 
