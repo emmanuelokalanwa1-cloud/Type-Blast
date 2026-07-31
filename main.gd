@@ -742,6 +742,8 @@ func _on_career_rank_selected(rank: int) -> void:
 func _start_game() -> void:
 	word_manager.clear_words()
 	powerup_system.reset()
+	game_state.running = true
+	game_state.is_paused = false
 	spawn_timer = 0.0
 	base_fall_speed = 40.0
 	career_fall_speed_bonus = career_manager.get_fall_speed_bonus() if is_instance_valid(career_manager) else 0.0
@@ -1126,8 +1128,6 @@ func _on_restart_pressed() -> void:
 	is_transitioning = false
 	await get_tree().process_frame
 	_start_game()
-	game_state.is_paused = false
-	game_state.running = true
 
 func _on_menu_pressed() -> void:
 	result_panel.visible = false
