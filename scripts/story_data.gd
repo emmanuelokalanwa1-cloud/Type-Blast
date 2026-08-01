@@ -1,185 +1,675 @@
-class_name StoryData
-extends RefCounted
+class_name StoryModeScreen
+extends VBoxContainer
 
-## "DEEP SIGNAL" — Type Blast's Story Mode.
+## "DEEP SIGNAL" — Story Mode, embedded inside MoreScreen's content panel
+## (same pattern PracticeSession/VersusMode/GhostRacer already use).
 ##
-## Same structural idea as a fighting game's story mode (Mortal Kombat's
-## in particular): a short arc told through text-panel "cutscenes" between
-## challenges, one location per chapter, background changes every chapter
-## so it visually reads as moving somewhere new. Here the "fight" is a
-## typing challenge instead of combat.
+## Structure is deliberately close to a fighting game's story mode: pick a
+## chapter from a list, read a couple of cutscene panels, play a typing
+## challenge, read the payoff panels, unlock the next chapter. Each
+## chapter gets its own colored "scene banner" (built from
+## BackgroundThemes' existing 4 palettes) so it visually reads as a new
+## location every chapter, without touching MoreScreen's own rotating
+## backdrop system.
 ##
-## The challenge itself types whole sentences (via SentenceBank), not
-## single words — each "transmission" reads like an actual message you're
-## transcribing, which fits the story far better than isolated words
-## would. Uses SentenceBank exactly as SentenceModeScreen does (same
-## exact-match rules), just strung into a per-chapter queue.
-##
-## Fully original text written for this project — no existing characters,
-## IP, or real people. Six chapters ("Transmissions"), building lightly in
-## length/difficulty. `bg_theme` indexes into the existing
-## BackgroundThemes.THEMES (0-3), reused/cycled rather than duplicated.
+## Chapter data lives in StoryData (data-only, no logic). This script is
+## pure flow/UI. Doesn't touch score/lives/high_scores/career/mission
+## state — on clearing a chapter it only ever writes
+## GameState.story_chapter_unlocked / story_chapters_cleared and logs one
+## run_history entry via register_practice_result(), same as every other
+## practice mode.
 
-const CHAPTERS := [
-	{
-		"id": 1,
-		"title": "Dead Air",
-		"location": "Listening Post Kestrel",
-		"bg_theme": 0,
-		"intro": [
-			"Three days of static. Then, at 03:14, something answers back.",
-			"You're the only operator still awake on the Kestrel tonight. Whatever this signal is, you're the one who has to read it.",
-			"Type each line exactly as it arrives — the channel drops if you fall too far behind.",
-		],
-		"outro": [
-			"The fragments resolve into coordinates. Somewhere out past the debris field, something is still broadcasting.",
-		],
-		"theme": "General", "max_sentence_len": 55,
-		"line_count": 5, "lives": 0,
-	},
-	{
-		"id": 2,
-		"title": "The Relay",
-		"location": "Orbital Relay 7",
-		"bg_theme": 1,
-		"intro": [
-			"Relay 7 hasn't answered a single ping in six years. Now its old transmitter is wide open, screaming data into empty space.",
-			"You patch in. The lines come faster here — six years of backlog, all trying to clear the queue at once.",
-		],
-		"outro": [
-			"Buried in the backlog: a maintenance log, and a name you don't recognize, repeated over and over.",
-		],
-		"theme": "Tech", "max_sentence_len": 55,
-		"line_count": 6, "lives": 0,
-	},
-	{
-		"id": 3,
-		"title": "Drift Station",
-		"location": "Derelict Station Amaranth",
-		"bg_theme": 2,
-		"intro": [
-			"Amaranth Station has been adrift for a decade. Its beacon still repeats one message, over and over, in every language it knows.",
-			"You start transcribing the beacon's feed line by line, hunting for whatever it's trying to say before its batteries finally die.",
-		],
-		"outro": [
-			"The beacon cuts out mid-sentence. Whatever finished that message, it wasn't the beacon.",
-		],
-		"theme": "Space", "max_sentence_len": 65,
-		"line_count": 6, "lives": 0,
-	},
-	{
-		"id": 4,
-		"title": "Radio Silence",
-		"location": "Blackout Sector",
-		"bg_theme": 3,
-		"intro": [
-			"Something is jamming every frequency except one — yours. Every dropped line here costs the connection for good.",
-			"Three strikes. That's all the jammer gives you before it locks you out completely. Make every line count.",
-		],
-		"outro": [
-			"The jamming stops as suddenly as it started. In the silence that follows, one clear transmission finally gets through.",
-		],
-		"theme": "Adventure", "max_sentence_len": 70,
-		"line_count": 6, "lives": 3, "duration": 45.0,
-	},
-	{
-		"id": 5,
-		"title": "The Core",
-		"location": "Kestrel Reactor Core",
-		"bg_theme": 0,
-		"intro": [
-			"The clear transmission was a warning: the Kestrel's own reactor core is failing, and only a full manual shutdown sequence can stop it.",
-			"The sequence has to be typed exactly, against the reactor's own failing countdown. No pressure.",
-		],
-		"outro": [
-			"The core powers down with seconds to spare. Whatever's out past the debris field will have to wait a little longer.",
-		],
-		"theme": "Nature", "max_sentence_len": 80,
-		"line_count": 7, "lives": 3, "duration": 40.0,
-	},
-	{
-		"id": 6,
-		"title": "Signal Home",
-		"location": "Kestrel Comms Array",
-		"bg_theme": 1,
-		"intro": [
-			"With the reactor stable, there's power to spare for one more thing: a full-strength broadcast, aimed at everything that answered you tonight.",
-			"Whoever — or whatever — is out there past the debris field is about to hear you loud and clear.",
-		],
-		"outro": [
-			"The broadcast goes out. Somewhere in the dark, several things start broadcasting back at once.",
-			"DEEP SIGNAL — END OF PART ONE.",
-		],
-		"theme": "General", "max_sentence_len": 90,
-		"line_count": 8, "lives": 3,
-	},
-]
+signal finished()   # emitted whenever a chapter is cleared (badge-check hook)
 
-## Returns a copy of `chapter` with sentence length/count, lives and
-## duration scaled for the chosen difficulty. Intro/outro text, title,
-## location and background stay the same — only the challenge changes.
-static func apply_difficulty(chapter: Dictionary, difficulty: String) -> Dictionary:
-	var c: Dictionary = chapter.duplicate(true)
-	var max_sentence_len: int = c.get("max_sentence_len", 70)
-	var line_count: int = c.get("line_count", 6)
-	var lives: int = c.get("lives", 0)
-	var duration: float = c.get("duration", 0.0)
+const COL_GOLD := Color(1.0, 0.78, 0.25)
+const COL_MINT := Color(0.4, 0.9, 0.75)
+const COL_MUTE := Color(1, 1, 1, 0.6)
+const COL_RED := Color(0.85, 0.35, 0.35)
+const COL_SKY := Color(0.45, 0.7, 0.95)
+const COL_AMBER := Color(0.95, 0.6, 0.25)
 
-	match difficulty:
-		"easy":
-			max_sentence_len = max(30, max_sentence_len - 10)
-			line_count = max(4, line_count - 2)
-			if lives > 0:
-				lives += 1
-			if duration > 0.0:
-				duration *= 1.35
-		"hard":
-			max_sentence_len += 15
-			line_count += 2
-			if lives > 0:
-				lives = max(1, lives - 1)
-			else:
-				lives = 2   # even the "no-fail" early chapters get real stakes on Hard
-			if duration > 0.0:
-				duration *= 0.75
+var _game_state: GameState
+var _audio: AudioManager
+var _mission_manager: MissionManager
 
-	c["max_sentence_len"] = max_sentence_len
-	c["line_count"] = line_count
-	c["lives"] = lives
-	c["duration"] = duration
-	c["difficulty"] = difficulty
-	return c
+var _stage := "select"   # select -> intro -> challenge -> results -> outro | fail
+var _current_chapter: Dictionary = {}
+var _panel_index := 0
+
+var _line_queue: Array = []
+var _queue_index := 0
+var _current_line := ""
+var _hits := 0
+var _misses := 0
+var _lines_typed := 0
+var _word_units_done := 0.0
+var _lives := 0
+var _duration := 0.0
+var _time_left := 0.0
+var _fail_reason := "lives"
+var _last_wpm := 0.0
+var _last_acc := 0.0
+var _decoded_this_run := false
+var _start_msec := 0
+var _rng := RandomNumberGenerator.new()
+
+var _input_edit: LineEdit
+var _line_label: RichTextLabel
+var _progress_label: Label
+var _lives_label: Label
+var _timer_label: Label
+
+## --- Signal Window (live-decode typing) ---------------------------------
+## Every other mode in the game shows the full target text up front and
+## you transcribe it - that's fine for a typing DRILL, but it's exactly
+## why Story Mode reads as "the same typing" wearing a different label.
+## This makes the ACT of typing itself part of the fiction: you never see
+## the whole line. Only a short window ahead of your cursor is legible;
+## past that, it's unresolved static. Typing well WIDENS that window
+## (clearer signal); mismatches and hesitation NARROW it (signal
+## degrading) - so your pace and accuracy control what you can even see
+## next, not just your final score. Nothing else in the game ties
+## visibility itself to performance in real time.
+const SIGNAL_BASE_CLARITY := 9.0
+const SIGNAL_MIN_CLARITY := 4.0
+const SIGNAL_MAX_CLARITY := 18.0
+const SIGNAL_GROW_PER_CHAR := 0.12
+const SIGNAL_MISS_PENALTY := 3.0
+const SIGNAL_HESITATE_AFTER_MSEC := 900
+const SIGNAL_DECAY_PER_SEC := 3.0
+const STATIC_GLYPHS := ["▓", "▒", "░", "×", "◆", "◇", "‡", "†"]
+
+var _signal_clarity := SIGNAL_BASE_CLARITY
+var _last_keystroke_msec := 0
 
 
-static func chapter_count() -> int:
-	return CHAPTERS.size()
+func configure(game_state: GameState, audio: AudioManager, mission_manager: MissionManager = null) -> void:
+	_game_state = game_state
+	_audio = audio
+	_mission_manager = mission_manager
+	_rng.randomize()
+	add_theme_constant_override("separation", 12)
+	_render_select()
 
-static func get_chapter(id: int) -> Dictionary:
-	for c: Dictionary in CHAPTERS:
-		if c.get("id", -1) == id:
-			return c
-	return {}
 
-## Builds the "transmission" queue for a chapter: a shuffled set of whole
-## sentences from SentenceBank, filtered to the chapter's max length (and
-## widened, then finally un-filtered, if that leaves too few candidates —
-## some theme pools are short).
-static func sentence_queue_for(chapter: Dictionary, rng: RandomNumberGenerator) -> Array:
-	var theme_name: String = chapter.get("theme", "General")
-	var max_len: int = chapter.get("max_sentence_len", 70)
-	var needed: int = max(chapter.get("line_count", 6), 3)
+func _clear_self() -> void:
+	for child in get_children():
+		child.queue_free()
 
-	var pool: Array = SentenceBank.get_theme_sentences(theme_name)
-	var filtered: Array = pool.filter(func(s): return String(s).length() <= max_len)
-	if filtered.size() < needed:
-		filtered = pool.filter(func(s): return String(s).length() <= max_len + 25)
-	if filtered.size() < needed:
-		filtered = pool
 
-	var shuffled: Array = filtered.duplicate()
-	for i in range(shuffled.size() - 1, 0, -1):
-		var j = rng.randi_range(0, i)
-		var tmp = shuffled[i]
-		shuffled[i] = shuffled[j]
-		shuffled[j] = tmp
-	return shuffled.slice(0, min(needed, shuffled.size()))
+func _title_label(txt: String, color: Color, size: int = 24) -> Label:
+	var l = Label.new()
+	l.text = txt
+	l.add_theme_font_size_override("font_size", size)
+	l.add_theme_color_override("font_color", color)
+	return l
+
+
+func _body_label(txt: String, color: Color = Color(1, 1, 1, 0.9)) -> Label:
+	var l = Label.new()
+	l.text = txt
+	l.add_theme_font_size_override("font_size", 19)
+	l.modulate = color
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD
+	return l
+
+
+func _nav_button(txt: String, color: Color) -> Button:
+	var b = Button.new()
+	b.text = txt
+	b.custom_minimum_size = Vector2(0, 56)
+	b.add_theme_font_size_override("font_size", 20)
+	b.add_theme_color_override("font_color", color)
+	return b
+
+
+## The per-chapter "changing background": a colored banner built from one
+## of BackgroundThemes' 4 existing palettes (top/bottom gradient color +
+## accent), so every chapter reads as a visually distinct location without
+## a second parallel backdrop system.
+func _build_scene_banner(chapter: Dictionary) -> PanelContainer:
+	var th: Dictionary = BackgroundThemes.theme(chapter.get("bg_theme", 0))
+	var panel := PanelContainer.new()
+	var style := StyleBoxFlat.new()
+	style.bg_color = th.get("top", Color(0.05, 0.05, 0.08))
+	style.set_corner_radius_all(16)
+	style.border_width_left = 2
+	style.border_width_right = 2
+	style.border_width_top = 2
+	style.border_width_bottom = 2
+	style.border_color = th.get("accent", COL_SKY)
+	style.content_margin_left = 18
+	style.content_margin_right = 18
+	style.content_margin_top = 14
+	style.content_margin_bottom = 14
+	panel.add_theme_stylebox_override("panel", style)
+
+	var vb = VBoxContainer.new()
+	panel.add_child(vb)
+
+	var loc = Label.new()
+	loc.text = String(chapter.get("location", "")).to_upper()
+	loc.add_theme_font_size_override("font_size", 15)
+	loc.modulate = th.get("accent", COL_SKY)
+	vb.add_child(loc)
+
+	var title = Label.new()
+	title.text = "CH. %d — %s" % [chapter.get("id", 0), chapter.get("title", "")]
+	title.add_theme_font_size_override("font_size", 24)
+	title.add_theme_color_override("font_color", Color.WHITE)
+	vb.add_child(title)
+
+	return panel
+
+
+# --- Chapter select ---
+
+func _render_select() -> void:
+	_stage = "select"
+	_clear_self()
+
+	var eyebrow = _title_label("STORY MODE", COL_MINT, 18)
+	add_child(eyebrow)
+	var title = _title_label("DEEP SIGNAL", COL_GOLD, 30)
+	add_child(title)
+	var subtitle = _body_label("A comms operator's night, told in six transmissions. Clear each one to unlock the next.", COL_MUTE)
+	add_child(subtitle)
+
+	add_child(_body_label("Difficulty", COL_MUTE))
+	var diff_row = HBoxContainer.new()
+	diff_row.add_theme_constant_override("separation", 8)
+	add_child(diff_row)
+	var current_diff: String = _game_state.story_difficulty if is_instance_valid(_game_state) else "normal"
+	for d in ["easy", "normal", "hard"]:
+		var diff_btn = Button.new()
+		diff_btn.text = d.to_upper()
+		diff_btn.toggle_mode = true
+		diff_btn.button_pressed = (d == current_diff)
+		diff_btn.custom_minimum_size = Vector2(0, 44)
+		diff_btn.add_theme_font_size_override("font_size", 16)
+		if d == current_diff:
+			diff_btn.add_theme_color_override("font_color", COL_GOLD)
+		diff_row.add_child(diff_btn)
+		diff_btn.pressed.connect(func():
+			if is_instance_valid(_game_state):
+				_game_state.story_difficulty = d
+				_game_state.save_data()
+			if _audio: _audio.play_ui_click()
+			_render_select()
+		)
+
+	add_child(HSeparator.new())
+
+	var legend = _body_label("🔒 locked · ✓ cleared · ✓💎 cleared on Hard · ◆ signal fully decoded", COL_MUTE)
+	legend.add_theme_font_size_override("font_size", 14)
+	add_child(legend)
+
+	var unlocked: int = _game_state.story_chapter_unlocked if is_instance_valid(_game_state) else 1
+	var cleared: Array = _game_state.story_chapters_cleared if is_instance_valid(_game_state) else []
+	var cleared_hard: Array = _game_state.story_chapters_cleared_hard if is_instance_valid(_game_state) else []
+	var decoded: Array = _game_state.story_chapters_decoded if is_instance_valid(_game_state) else []
+
+	for chapter: Dictionary in StoryData.CHAPTERS:
+		var id: int = chapter.get("id", 0)
+		var is_unlocked := id <= unlocked
+		var is_cleared: bool = cleared.has(id)
+		var is_cleared_hard: bool = cleared_hard.has(id)
+		var is_decoded: bool = decoded.has(id)
+		var scaled: Dictionary = StoryData.apply_difficulty(chapter, current_diff)
+
+		var row = PanelContainer.new()
+		var style := StyleBoxFlat.new()
+		style.bg_color = Color(1, 1, 1, 0.05) if is_unlocked else Color(1, 1, 1, 0.02)
+		style.set_corner_radius_all(14)
+		style.content_margin_left = 16
+		style.content_margin_right = 16
+		style.content_margin_top = 10
+		style.content_margin_bottom = 10
+		row.add_theme_stylebox_override("panel", style)
+
+		var vb = VBoxContainer.new()
+		row.add_child(vb)
+
+		var btn = Button.new()
+		btn.flat = true
+		btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		btn.add_theme_font_size_override("font_size", 21)
+		btn.disabled = not is_unlocked
+		var status := ""
+		if is_cleared_hard:
+			status = "  ✓💎"
+		elif is_cleared:
+			status = "  ✓"
+		elif not is_unlocked:
+			status = "  🔒"
+		if is_decoded:
+			status += "  ◆"
+		btn.text = "Ch. %d — %s%s" % [id, chapter.get("title", ""), status]
+		if is_unlocked:
+			btn.add_theme_color_override("font_color", Color.WHITE)
+			btn.add_theme_color_override("font_hover_color", COL_GOLD)
+		else:
+			btn.add_theme_color_override("font_disabled_color", COL_MUTE)
+		vb.add_child(btn)
+
+		if is_unlocked:
+			var info_bits: Array = ["%s" % chapter.get("location", ""), "%d lines" % scaled.get("line_count", 0)]
+			if scaled.get("lives", 0) > 0:
+				info_bits.append("♥ %d" % scaled.get("lives", 0))
+			if scaled.get("duration", 0.0) > 0.0:
+				info_bits.append("⏱ %ds" % int(scaled.get("duration", 0.0)))
+			var desc = _body_label(" · ".join(info_bits), COL_MUTE)
+			desc.add_theme_font_size_override("font_size", 16)
+			vb.add_child(desc)
+			if is_cleared and not is_decoded and chapter.get("decoded", []).size() > 0:
+				var decode_hint = _body_label("Cleared, but the signal's still a little garbled - retype cleanly to decode it fully.", COL_AMBER)
+				decode_hint.add_theme_font_size_override("font_size", 13)
+				vb.add_child(decode_hint)
+		else:
+			var locked_desc = _body_label("Clear the previous transmission to unlock.", COL_MUTE)
+			locked_desc.add_theme_font_size_override("font_size", 16)
+			vb.add_child(locked_desc)
+
+		if is_unlocked:
+			btn.pressed.connect(func():
+				if _audio: _audio.play_whoosh()
+				_start_chapter(id)
+			)
+		add_child(row)
+
+	if unlocked > StoryData.chapter_count():
+		add_child(HSeparator.new())
+		var teaser = PanelContainer.new()
+		var teaser_style := StyleBoxFlat.new()
+		teaser_style.bg_color = Color(1, 1, 1, 0.03)
+		teaser_style.set_corner_radius_all(14)
+		teaser_style.content_margin_left = 16
+		teaser_style.content_margin_right = 16
+		teaser_style.content_margin_top = 10
+		teaser_style.content_margin_bottom = 10
+		teaser.add_theme_stylebox_override("panel", teaser_style)
+		var teaser_vb = VBoxContainer.new()
+		teaser.add_child(teaser_vb)
+		teaser_vb.add_child(_title_label("🔒  DEEP SIGNAL — PART TWO", COL_MUTE, 18))
+		teaser_vb.add_child(_body_label("Coming soon.", COL_MUTE))
+		add_child(teaser)
+		add_child(_body_label("You've heard every transmission. Thanks for playing DEEP SIGNAL, Part One.", COL_GOLD))
+
+
+func _start_chapter(id: int) -> void:
+	var base_chapter := StoryData.get_chapter(id)
+	if base_chapter.is_empty():
+		return
+	var difficulty: String = _game_state.story_difficulty if is_instance_valid(_game_state) else "normal"
+	_current_chapter = StoryData.apply_difficulty(base_chapter, difficulty)
+	_panel_index = 0
+	_render_intro()
+
+
+# --- Cutscene panels (intro / outro share the same pager) ---
+
+func _render_intro() -> void:
+	_stage = "intro"
+	var id: int = _current_chapter.get("id", 0)
+	var already_cleared: bool = is_instance_valid(_game_state) and _game_state.story_chapters_cleared.has(id)
+	_render_panel_page(_current_chapter.get("intro", []), func(): _render_challenge(), already_cleared)
+
+
+func _render_outro() -> void:
+	_stage = "outro"
+	var pages: Array = _current_chapter.get("outro", []).duplicate()
+	if _decoded_this_run:
+		pages.append_array(_current_chapter.get("decoded", []))
+	_render_panel_page(pages, func(): _complete_chapter(), false)
+
+
+func _render_panel_page(pages: Array, on_last_next: Callable, allow_skip: bool = false) -> void:
+	_clear_self()
+	add_child(_build_scene_banner(_current_chapter))
+
+	var page_text: String = pages[_panel_index] if _panel_index < pages.size() else ""
+	var body = _body_label(page_text)
+	body.add_theme_font_size_override("font_size", 20)
+	add_child(body)
+
+	var progress = _body_label("Page %d / %d" % [_panel_index + 1, max(pages.size(), 1)], COL_MUTE)
+	progress.add_theme_font_size_override("font_size", 14)
+	add_child(progress)
+
+	var is_last := _panel_index >= pages.size() - 1
+	var next_btn = _nav_button("BEGIN" if (is_last and _stage == "intro") else ("CONTINUE" if is_last else "NEXT ▶"), COL_SKY if not is_last else COL_GOLD)
+	next_btn.pressed.connect(func():
+		if _audio: _audio.play_ui_click()
+		if is_last:
+			_panel_index = 0
+			on_last_next.call()
+		else:
+			_panel_index += 1
+			_render_panel_page(pages, on_last_next, allow_skip)
+	)
+	add_child(next_btn)
+
+	if allow_skip and not is_last:
+		var skip_btn = _nav_button("SKIP TO CHALLENGE ▶▶", COL_MUTE)
+		skip_btn.pressed.connect(func():
+			if _audio: _audio.play_ui_click()
+			_panel_index = 0
+			on_last_next.call()
+		)
+		add_child(skip_btn)
+
+
+# --- Challenge ---
+
+func _render_challenge() -> void:
+	_stage = "challenge"
+	_hits = 0
+	_misses = 0
+	_lines_typed = 0
+	_queue_index = 0
+	_word_units_done = 0.0
+	_lives = _current_chapter.get("lives", 0)
+	_duration = _current_chapter.get("duration", 0.0)
+	_time_left = _duration
+	_fail_reason = "lives"
+	_start_msec = Time.get_ticks_msec()
+
+	_line_queue = StoryData.sentence_queue_for(_current_chapter, _rng)
+
+	_clear_self()
+	add_child(_build_scene_banner(_current_chapter))
+
+	var stats_row = HBoxContainer.new()
+	stats_row.add_theme_constant_override("separation", 16)
+	add_child(stats_row)
+
+	var progress_label = Label.new()
+	progress_label.add_theme_font_size_override("font_size", 16)
+	progress_label.modulate = COL_MINT
+	stats_row.add_child(progress_label)
+	_progress_label = progress_label
+
+	var lives_label = Label.new()
+	lives_label.add_theme_font_size_override("font_size", 16)
+	lives_label.modulate = COL_RED
+	stats_row.add_child(lives_label)
+	_lives_label = lives_label
+
+	var timer_label = Label.new()
+	timer_label.add_theme_font_size_override("font_size", 16)
+	timer_label.modulate = COL_AMBER
+	stats_row.add_child(timer_label)
+	_timer_label = timer_label
+
+	var word_label = RichTextLabel.new()
+	word_label.bbcode_enabled = true
+	word_label.fit_content = true
+	word_label.scroll_active = false
+	word_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+	word_label.add_theme_font_size_override("normal_font_size", 22)
+	word_label.add_theme_font_size_override("bold_font_size", 22)
+	add_child(word_label)
+	_line_label = word_label
+
+	_input_edit = LineEdit.new()
+	_input_edit.custom_minimum_size = Vector2(0, 56)
+	_input_edit.add_theme_font_size_override("font_size", 24)
+	_input_edit.text_changed.connect(_on_text_changed)
+	_input_edit.text_submitted.connect(_on_text_submitted)
+	add_child(_input_edit)
+
+	if _line_queue.is_empty():
+		add_child(_body_label("Nothing to transcribe here yet — try again shortly.", COL_MUTE))
+		var back_btn = _nav_button("BACK TO TRANSMISSIONS", COL_MUTE)
+		back_btn.pressed.connect(func():
+			if _audio: _audio.play_ui_click()
+			_render_select()
+		)
+		add_child(back_btn)
+		return
+
+	var give_up_btn = _nav_button("GIVE UP (BACK TO TRANSMISSIONS)", COL_MUTE)
+	give_up_btn.pressed.connect(func():
+		if _audio: _audio.play_ui_click()
+		_render_select()
+	)
+	add_child(give_up_btn)
+
+	_update_challenge_labels()
+	_advance_line()
+	call_deferred("_focus_input")
+
+
+func _process(delta: float) -> void:
+	if _stage != "challenge":
+		return
+	if _duration > 0.0:
+		_time_left -= delta
+		if _timer_label:
+			_timer_label.text = "%d s" % max(int(ceil(_time_left)), 0)
+		if _time_left <= 0.0:
+			_fail_reason = "time"
+			_render_fail()
+			return
+	# Signal decay: pause mid-line for too long and the window narrows on
+	# its own, independent of the chapter's own countdown timer (some
+	# chapters don't have one at all) - this is about steady pace, not a
+	# hard deadline.
+	if _current_line != "" and is_instance_valid(_input_edit):
+		var idle_msec := Time.get_ticks_msec() - _last_keystroke_msec
+		if idle_msec > SIGNAL_HESITATE_AFTER_MSEC and _signal_clarity > SIGNAL_MIN_CLARITY:
+			_signal_clarity = max(_signal_clarity - SIGNAL_DECAY_PER_SEC * delta, SIGNAL_MIN_CLARITY)
+			_render_line_display(_input_edit.text)
+
+
+func _focus_input() -> void:
+	if is_instance_valid(_input_edit):
+		_input_edit.grab_focus()
+
+
+func _update_challenge_labels() -> void:
+	if _progress_label:
+		_progress_label.text = "%d / %d" % [_lines_typed, _line_queue.size()]
+	if _lives_label:
+		_lives_label.text = ("♥ %d" % _lives) if _lives > 0 else ""
+	if _timer_label:
+		_timer_label.text = ("%d s" % max(int(ceil(_time_left)), 0)) if _duration > 0.0 else ""
+
+
+func _advance_line() -> void:
+	if _queue_index >= _line_queue.size():
+		_finish_challenge()
+		return
+	_current_line = String(_line_queue[_queue_index])
+	_queue_index += 1
+	_signal_clarity = SIGNAL_BASE_CLARITY
+	_last_keystroke_msec = Time.get_ticks_msec()
+	if _input_edit:
+		_input_edit.text = ""
+	_render_line_display("")
+
+
+func _on_text_changed(new_text: String) -> void:
+	if not _line_label:
+		return
+	if new_text == _current_line:
+		_submit_line(true)
+		return
+	if _current_line.begins_with(new_text):
+		# Typing correctly widens the visible window a little per
+		# character - keep moving cleanly and more of the line resolves
+		# ahead of you.
+		_signal_clarity = min(_signal_clarity + SIGNAL_GROW_PER_CHAR, SIGNAL_MAX_CLARITY)
+	else:
+		# A wrong keystroke visibly degrades the signal instead of just
+		# flashing red - the window itself narrows, so a mistake costs you
+		# more than a moment's embarrassment.
+		_signal_clarity = max(_signal_clarity - SIGNAL_MISS_PENALTY, SIGNAL_MIN_CLARITY)
+	_last_keystroke_msec = Time.get_ticks_msec()
+	_render_line_display(new_text)
+
+
+## --- Signal Window rendering ---------------------------------------------
+## Builds the transmission line as three BBCode spans instead of showing
+## the whole target sentence: what you've already typed correctly (clean),
+## a short legible window just ahead of your cursor, and everything past
+## that as unresolved static - masked character-by-character with random
+## glyphs (spaces stay visible so word shape/length still reads). The
+## window's size (_signal_clarity) is driven live by _on_text_changed()
+## and _process(), so what's actually legible keeps shifting under you
+## based on how you're typing right now, not a fixed reveal.
+func _render_line_display(typed_text: String) -> void:
+	if not _line_label or _current_line == "":
+		return
+	var target := _current_line
+	var matched_len := 0
+	var max_common: int = min(typed_text.length(), target.length())
+	while matched_len < max_common and typed_text[matched_len] == target[matched_len]:
+		matched_len += 1
+	var mismatched := typed_text.length() > matched_len
+
+	var window := int(round(_signal_clarity))
+	var reveal_end: int = min(matched_len + window, target.length())
+
+	var confirmed := target.substr(0, matched_len)
+	var legible := target.substr(matched_len, reveal_end - matched_len)
+	var masked := target.substr(reveal_end)
+
+	var masked_display := ""
+	for c in masked:
+		if c == " ":
+			masked_display += " "
+		else:
+			masked_display += STATIC_GLYPHS[_rng.randi() % STATIC_GLYPHS.size()]
+
+	var confirmed_color := "#" + (COL_RED.to_html(false) if mismatched else COL_MINT.to_html(false))
+	var legible_color := "#" + (COL_AMBER.to_html(false) if mismatched else "ffffff")
+	var masked_color := "#5a5f6e"
+
+	var bbcode := "[center]"
+	bbcode += "[color=%s]%s[/color]" % [confirmed_color, _bbcode_escape(confirmed)]
+	bbcode += "[color=%s]%s[/color]" % [legible_color, _bbcode_escape(legible)]
+	bbcode += "[color=%s]%s[/color]" % [masked_color, _bbcode_escape(masked_display)]
+	bbcode += "[/center]"
+	_line_label.text = bbcode
+
+
+func _bbcode_escape(s: String) -> String:
+	return s.replace("[", "[lb]")
+
+
+func _on_text_submitted(new_text: String) -> void:
+	_submit_line(new_text == _current_line)
+
+
+func _submit_line(is_correct: bool) -> void:
+	if is_correct:
+		_hits += 1
+		_lines_typed += 1
+		_word_units_done += SentenceBank.standard_word_count(_current_line)
+		if _audio: _audio.play_success()
+		_update_challenge_labels()
+		_advance_line()
+		return
+
+	_misses += 1
+	if _audio: _audio.play_error()
+
+	if _lives > 0:
+		_lives -= 1
+		_update_challenge_labels()
+		if _lives <= 0:
+			_render_fail()
+			return
+	_advance_line()
+
+
+func _finish_challenge() -> void:
+	_last_wpm = 0.0
+	_last_acc = 100.0
+	if is_instance_valid(_game_state):
+		var elapsed_min = max((Time.get_ticks_msec() - _start_msec) / 60000.0, 1.0 / 60.0)
+		_last_wpm = _word_units_done / elapsed_min if elapsed_min > 0 else 0.0
+		var total = _hits + _misses
+		_last_acc = 100.0 if total <= 0 else (float(_hits) / total) * 100.0
+		_game_state.register_practice_result("Story: %s" % _current_chapter.get("title", ""), _last_wpm, _last_acc, _lines_typed)
+	_decoded_this_run = StoryData.meets_decode_threshold(_last_acc, _misses)
+	_render_results()
+
+
+func _render_results() -> void:
+	_stage = "results"
+	_clear_self()
+	add_child(_build_scene_banner(_current_chapter))
+	add_child(_title_label("TRANSMISSION RECEIVED", COL_GOLD, 22))
+
+	var stats = _body_label("%d lines · %.0f WPM · %.0f%% accuracy" % [_lines_typed, _last_wpm, _last_acc], COL_MINT)
+	stats.add_theme_font_size_override("font_size", 20)
+	add_child(stats)
+
+	var diff_label = _body_label("Difficulty: %s" % String(_current_chapter.get("difficulty", "normal")).capitalize(), COL_MUTE)
+	diff_label.add_theme_font_size_override("font_size", 15)
+	add_child(diff_label)
+
+	# Decode Threshold: a clean run (see StoryData.meets_decode_threshold)
+	# unlocks an extra hidden fragment on the outro screen right after
+	# this. A messy-but-passed run still clears the chapter fine - it just
+	# doesn't get the deeper line, which is the whole point: it gives
+	# skilled/careful typing a payoff beyond "you didn't fail."
+	if _current_chapter.get("decoded", []).size() > 0:
+		var decode_label: Label
+		if _decoded_this_run:
+			decode_label = _body_label("◆ SIGNAL FULLY DECODED - a hidden fragment is waiting on the next screen.", COL_GOLD)
+		else:
+			decode_label = _body_label("◇ Signal partially decoded. Retype this transmission cleanly (96%+ accuracy, ≤1 miss) to decode it fully.", COL_MUTE)
+		decode_label.add_theme_font_size_override("font_size", 15)
+		add_child(decode_label)
+
+	var continue_btn = _nav_button("CONTINUE", COL_SKY)
+	continue_btn.pressed.connect(func():
+		if _audio: _audio.play_ui_click()
+		_render_outro()
+	)
+	add_child(continue_btn)
+
+
+func _render_fail() -> void:
+	_stage = "fail"
+	_clear_self()
+	add_child(_build_scene_banner(_current_chapter))
+	add_child(_title_label("TRANSMISSION LOST", COL_RED, 24))
+	var msg := "The connection dropped before you finished. No progress lost — try the transmission again whenever you're ready."
+	if _fail_reason == "time":
+		msg = "Time ran out before you finished. No progress lost — try the transmission again whenever you're ready."
+	add_child(_body_label(msg))
+
+	var retry_btn = _nav_button("RETRY TRANSMISSION", COL_SKY)
+	retry_btn.pressed.connect(func():
+		if _audio: _audio.play_ui_click()
+		_panel_index = 0
+		_render_intro()
+	)
+	add_child(retry_btn)
+
+	var back_btn = _nav_button("BACK TO TRANSMISSIONS", COL_MUTE)
+	back_btn.pressed.connect(func():
+		if _audio: _audio.play_ui_click()
+		_render_select()
+	)
+	add_child(back_btn)
+
+
+func _complete_chapter() -> void:
+	if is_instance_valid(_game_state):
+		var id: int = _current_chapter.get("id", 0)
+		if id == _game_state.story_chapter_unlocked:
+			_game_state.story_chapter_unlocked = id + 1
+		if not _game_state.story_chapters_cleared.has(id):
+			_game_state.story_chapters_cleared.append(id)
+		if _current_chapter.get("difficulty", "normal") == "hard" and not _game_state.story_chapters_cleared_hard.has(id):
+			_game_state.story_chapters_cleared_hard.append(id)
+		if _decoded_this_run and not _game_state.story_chapters_decoded.has(id):
+			_game_state.story_chapters_decoded.append(id)
+		_game_state.save_data()
+	finished.emit()
+	_render_select()
