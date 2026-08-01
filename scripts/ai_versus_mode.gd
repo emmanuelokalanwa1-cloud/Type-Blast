@@ -198,10 +198,52 @@ func _show_setup_screen() -> void:
 			ai_select.add_item("The Professor (Slow / Flawless)")
 			ai_select.add_item("The Rusher (Blazing Fast / Makes Mistakes)")
 			ai_select.add_item("The Slacker (Inconsistent / Lazy)")
+			ai_select.add_item("Echo (Mirrors YOUR weak keys)")
 			ai_row.add_child(ai_select)
+
+			# This whole block gets torn down and rebuilt (queue_free above)
+			# every time the player flips between "Vs AI" and "Pass and
+			# Play", which creates a brand-new OptionButton defaulting to
+			# index 0 - but _ai_personality is a persistent instance var
+			# that doesn't reset with it. Without this, flipping away and
+			# back could leave the dropdown visually showing "The
+			# Professor" while _ai_personality (and this new Echo flavor
+			# label) still silently reflect whatever was picked before.
+			var personalities := ["The Professor", "The Rusher", "The Slacker", "Echo"]
+			var restore_idx := personalities.find(_ai_personality)
+			if restore_idx < 0:
+				restore_idx = 0
+				_ai_personality = "The Professor"
+			ai_select.selected = restore_idx
+
+			# Echo isn't a fixed archetype like the other three - it's built
+			# live from _game_state.get_weak_letters(), the same per-letter
+			# miss data the Settings > Weak Keys hand report already tracks
+			# and otherwise never gets used anywhere else. This label makes
+			# that legible before the match starts rather than the player
+			# discovering it mid-race with no explanation.
+			var ai_flavor := Label.new()
+			ai_flavor.autowrap_mode = TextServer.AUTOWRAP_WORD
+			ai_flavor.add_theme_font_size_override("font_size", 13)
+			ai_flavor.modulate = JellyTheme.text_color(COL_MUTE)
+			settings_box.add_child(ai_flavor)
+
+			var update_ai_flavor := func():
+				if _ai_personality != "Echo":
+					ai_flavor.visible = false
+					return
+				ai_flavor.visible = true
+				if not is_instance_valid(_game_state) or _game_state.weak_letter_counts.is_empty():
+					ai_flavor.text = "No weak-key history yet - Echo will race clean until you build some. Play a few normal rounds first, then come back."
+				else:
+					var w: Array = _game_state.get_weak_letters(3)
+					ai_flavor.text = "Built from your own miss data: stumbles hardest on %s - the same keys that slow YOU down. Beat it, beat your weak spots." % ", ".join(w).to_upper()
+
 			ai_select.item_selected.connect(func(idx):
-				_ai_personality = ["The Professor", "The Rusher", "The Slacker"][idx]
+				_ai_personality = personalities[idx]
+				update_ai_flavor.call()
 			)
+			update_ai_flavor.call()
 		else: # Pass and Play Name entries
 			var names_row := HBoxContainer.new()
 			settings_box.add_child(names_row)
@@ -713,6 +755,8 @@ func _calculate_ai_target_time() -> void:
 			base_wpm = 95.0 # Super fast, but drops consistency
 		"The Slacker":
 			base_wpm = randf_range(20.0, 75.0) # Completely unstable typing speed
+		"Echo":
+			base_wpm = 58.0 # Competent baseline - the per-word stumbles below are the whole point
 
 	var char_factor = word_text.length() / 5.0
 	var seconds_to_type = (60.0 / base_wpm) * char_factor
@@ -720,8 +764,48 @@ func _calculate_ai_target_time() -> void:
 	# Simulated mistakes logic
 	if _ai_personality == "The Rusher" and randf() < 0.25:
 		seconds_to_type += 1.5 # Major time penalty recovery on typos
+	elif _ai_personality == "Echo":
+		seconds_to_type += _echo_stumble_penalty(word_text)
 		
 	_ai_target_time_for_word = seconds_to_type
+
+
+## "Echo" - a rival built from the PLAYER's own weak-key data instead of a
+## fixed archetype. game_state.get_weak_letters() already exists and is
+## already tracked on every run (note_weak_letters()), but until now the
+## only thing that ever read it was the passive Settings > Weak Keys hand
+## report. This turns that same data into an opponent: Echo types at a
+## steady, competent pace, then visibly stumbles on whichever specific
+## letters the PLAYER personally struggles with, scaled by how much they
+## struggle with them - so racing Echo is racing a reflection of your own
+## weak spots rather than a generic difficulty slider. Beating it is a
+## direct, personal signal that you've actually improved on the letters
+## that were slowing you down, not just that you typed fast in general.
+func _echo_stumble_penalty(word_text: String) -> float:
+	if not is_instance_valid(_game_state) or _game_state.weak_letter_counts.is_empty():
+		return 0.0 # No history yet (new player / fresh save) - race clean instead of faking data
+	var weak_letters: Array = _game_state.get_weak_letters(6)
+	if weak_letters.is_empty():
+		return 0.0
+	var max_count := 0
+	for l in weak_letters:
+		max_count = max(max_count, int(_game_state.weak_letter_counts.get(l, 0)))
+	if max_count <= 0:
+		return 0.0
+	var worst_overlap := 0.0
+	for c in word_text.to_lower():
+		if c in weak_letters:
+			var severity: float = float(_game_state.weak_letter_counts.get(c, 0)) / float(max_count)
+			worst_overlap = max(worst_overlap, severity)
+	if worst_overlap <= 0.0:
+		return 0.0
+	# Scaled so even a full-strength weak letter costs a believable stumble
+	# (~0.9s), not a comedic full stop - and there's a real chance
+	# (weighted by severity) it recovers cleanly instead, the same way a
+	# person doesn't fumble the exact same weak key every single time.
+	if randf() < 0.55 + worst_overlap * 0.3:
+		return lerp(0.15, 0.9, worst_overlap)
+	return 0.0
 
 
 func _ai_advance() -> void:
@@ -769,10 +853,11 @@ func _finish_turn() -> void:
 		var ai_wpm_final = 55.0
 		if _ai_personality == "The Rusher": ai_wpm_final = 85.0
 		elif _ai_personality == "The Slacker": ai_wpm_final = 35.0
+		elif _ai_personality == "Echo": ai_wpm_final = 52.0 # competent, but the weak-key stumbles cost it a bit vs a flawless run
 		
 		_p2_result = {
 			"words_typed": _ai_words_typed,
-			"accuracy": 100.0 if _ai_personality == "The Professor" else 88.5,
+			"accuracy": 100.0 if _ai_personality == "The Professor" else (94.0 if _ai_personality == "Echo" else 88.5),
 			"wpm": ai_wpm_final,
 			"time": _ai_timer,
 			"fastest_time": 0.5,
@@ -943,27 +1028,3 @@ func _load_match_history_as_bbcode() -> String:
 		count += 1
 		
 	return "\n".join(out)
-	## Generates a clean, flat, modern button style that never stretches or distorts
-func create_casual_stylebox(border_color: Color) -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	
-	# Transparent dark gray background
-	style.bg_color = Color(0.1, 0.1, 0.1, 0.6) 
-	
-	# Subtle clean border
-	style.border_width_left = 2
-	style.border_width_right = 2
-	style.border_width_top = 2
-	style.border_width_bottom = 2
-	style.border_color = border_color
-	
-	# Clean rounded corners (perfect for grids and options!)
-	style.set_corner_radius_all(10)
-	
-	# Internal spacing so text has breathing room
-	style.content_margin_left = 12
-	style.content_margin_right = 12
-	style.content_margin_top = 8
-	style.content_margin_bottom = 8
-	
-	return style
