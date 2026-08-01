@@ -344,13 +344,13 @@ func _make_button(txt: String, accent: Color) -> Button:
 	# flat StyleBoxFlat rectangles here, so the pause menu looked like a
 	# different, cheaper app than the rest of the game). The "depth" texture
 	# gives the pressed state a real inset look instead of just a color shift.
-	var normal := _asset_button_style("res://assets/items/ui/button_rectangle.png", accent, 0.85)
+	var normal := JellyTheme.button_style(accent, 0.85, false)
 	btn.add_theme_stylebox_override("normal", normal)
 
-	var hover := _asset_button_style("res://assets/items/ui/button_rectangle.png", accent, 1.05)
+	var hover := JellyTheme.button_style(accent, 1.05, false)
 	btn.add_theme_stylebox_override("hover", hover)
 
-	var pressed_style := _asset_button_style("res://assets/items/ui/button_rectangle_depth.png", accent, 1.0)
+	var pressed_style := JellyTheme.button_style(accent, 1.0, true)
 	btn.add_theme_stylebox_override("pressed", pressed_style)
 
 	# 9/10. Hover + press scale feedback.
@@ -369,11 +369,6 @@ func _make_button(txt: String, accent: Color) -> Button:
 	return btn
 
 
-# Jelly skin (see scripts/jelly_theme.gd). texture_path is kept in the
-# signature so every call site above is untouched; "depth" in the path
-# (the old pressed-state texture) now maps to the jelly pressed art.
-func _asset_button_style(texture_path: String, tint: Color, brightness: float) -> StyleBox:
-	return JellyTheme.button_style(tint, brightness, texture_path.contains("depth"))
 
 func _labeled(txt: String) -> Label:
 	var l = Label.new()
