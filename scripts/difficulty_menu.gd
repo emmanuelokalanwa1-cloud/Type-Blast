@@ -490,7 +490,7 @@ func _build_flyout(vp: Vector2) -> void:
 	hint.text = LocalizationManager.get_string("weak_keys_hint", _game_state.selected_language)
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD
 	hint.add_theme_font_size_override("font_size", 13)
-	hint.modulate = COL_MUTE
+	hint.modulate = JellyTheme.text_color(COL_MUTE)
 	toggle_vbox.add_child(hint)
 
 	fly_vbox.add_child(_cascade_step(2, toggle_panel))
@@ -638,7 +638,7 @@ func _labeled(txt: String) -> Label:
 	var l = Label.new()
 	l.text = txt
 	l.add_theme_font_size_override("font_size", 14)
-	l.modulate = COL_MUTE
+	l.modulate = JellyTheme.text_color(COL_MUTE)
 	return l
 
 
@@ -656,7 +656,15 @@ func close() -> void:
 	visible = false
 
 
-## Generates a clean, flat, modern button style that never stretches or distorts
+## Generates a clean, flat, modern button style that never stretches or distorts.
+##
+## NOTE: deliberately NOT routed through JellyTheme.button_style() - this is
+## used for small controls (OptionButton dropdowns, MORE-flyout shortcut
+## rows) where the intent is a plain flat overlay that looks the same in
+## all 3 interface styles, not a per-style reskin. ai_versus_mode.gd used
+## to have an identically-named, identically-bodied copy of this exact
+## function that was never actually called from anywhere in that file -
+## that dead copy has been removed, so this is now the only one.
 func create_casual_stylebox(border_color: Color) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 
