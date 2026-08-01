@@ -415,14 +415,14 @@ func _make_button(txt: String, accent: Color) -> Button:
 	btn.add_theme_font_size_override("font_size", 22)
 	btn.pivot_offset = btn.custom_minimum_size / 2
 
-	var normal := _asset_button_style("res://assets/items/ui/button_rectangle.png", accent, 0.85)
+	var normal := JellyTheme.button_style(accent, 0.85, false)
 	btn.add_theme_stylebox_override("normal", normal)
 
-	var hover := _asset_button_style("res://assets/items/ui/button_rectangle.png", accent, 1.05)
+	var hover := JellyTheme.button_style(accent, 1.05, false)
 	btn.add_theme_stylebox_override("hover", hover)
 
 	# 4/5. Buttons had no pressed style before — added, plus scale feedback.
-	var pressed_style := _asset_button_style("res://assets/items/ui/button_rectangle_depth.png", accent, 1.0)
+	var pressed_style := JellyTheme.button_style(accent, 1.0, true)
 	btn.add_theme_stylebox_override("pressed", pressed_style)
 
 	btn.mouse_entered.connect(func():
@@ -440,8 +440,6 @@ func _make_button(txt: String, accent: Color) -> Button:
 
 	return btn
 
-func _asset_button_style(texture_path: String, tint: Color, brightness: float) -> StyleBox:
-	return JellyTheme.button_style(tint, brightness, texture_path.contains("depth"))
 
 func _on_reset_pressed() -> void:
 	# Same double-tap-to-confirm pattern as the pause menu's Quit button —
