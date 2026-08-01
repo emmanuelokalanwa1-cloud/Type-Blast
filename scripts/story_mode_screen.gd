@@ -49,14 +49,38 @@ var _time_left := 0.0
 var _fail_reason := "lives"
 var _last_wpm := 0.0
 var _last_acc := 0.0
+var _decoded_this_run := false
 var _start_msec := 0
 var _rng := RandomNumberGenerator.new()
 
 var _input_edit: LineEdit
-var _line_label: Label
+var _line_label: RichTextLabel
 var _progress_label: Label
 var _lives_label: Label
 var _timer_label: Label
+
+## --- Signal Window (live-decode typing) ---------------------------------
+## Every other mode in the game shows the full target text up front and
+## you transcribe it - that's fine for a typing DRILL, but it's exactly
+## why Story Mode reads as "the same typing" wearing a different label.
+## This makes the ACT of typing itself part of the fiction: you never see
+## the whole line. Only a short window ahead of your cursor is legible;
+## past that, it's unresolved static. Typing well WIDENS that window
+## (clearer signal); mismatches and hesitation NARROW it (signal
+## degrading) - so your pace and accuracy control what you can even see
+## next, not just your final score. Nothing else in the game ties
+## visibility itself to performance in real time.
+const SIGNAL_BASE_CLARITY := 9.0
+const SIGNAL_MIN_CLARITY := 4.0
+const SIGNAL_MAX_CLARITY := 18.0
+const SIGNAL_GROW_PER_CHAR := 0.12
+const SIGNAL_MISS_PENALTY := 3.0
+const SIGNAL_HESITATE_AFTER_MSEC := 900
+const SIGNAL_DECAY_PER_SEC := 3.0
+const STATIC_GLYPHS := ["▓", "▒", "░", "×", "◆", "◇", "‡", "†"]
+
+var _signal_clarity := SIGNAL_BASE_CLARITY
+var _last_keystroke_msec := 0
 
 
 func configure(game_state: GameState, audio: AudioManager, mission_manager: MissionManager = null) -> void:
@@ -176,19 +200,21 @@ func _render_select() -> void:
 
 	add_child(HSeparator.new())
 
-	var legend = _body_label("🔒 locked · ✓ cleared · ✓💎 cleared on Hard", COL_MUTE)
+	var legend = _body_label("🔒 locked · ✓ cleared · ✓💎 cleared on Hard · ◆ signal fully decoded", COL_MUTE)
 	legend.add_theme_font_size_override("font_size", 14)
 	add_child(legend)
 
 	var unlocked: int = _game_state.story_chapter_unlocked if is_instance_valid(_game_state) else 1
 	var cleared: Array = _game_state.story_chapters_cleared if is_instance_valid(_game_state) else []
 	var cleared_hard: Array = _game_state.story_chapters_cleared_hard if is_instance_valid(_game_state) else []
+	var decoded: Array = _game_state.story_chapters_decoded if is_instance_valid(_game_state) else []
 
 	for chapter: Dictionary in StoryData.CHAPTERS:
 		var id: int = chapter.get("id", 0)
 		var is_unlocked := id <= unlocked
 		var is_cleared: bool = cleared.has(id)
 		var is_cleared_hard: bool = cleared_hard.has(id)
+		var is_decoded: bool = decoded.has(id)
 		var scaled: Dictionary = StoryData.apply_difficulty(chapter, current_diff)
 
 		var row = PanelContainer.new()
@@ -216,6 +242,8 @@ func _render_select() -> void:
 			status = "  ✓"
 		elif not is_unlocked:
 			status = "  🔒"
+		if is_decoded:
+			status += "  ◆"
 		btn.text = "Ch. %d — %s%s" % [id, chapter.get("title", ""), status]
 		if is_unlocked:
 			btn.add_theme_color_override("font_color", Color.WHITE)
@@ -233,6 +261,10 @@ func _render_select() -> void:
 			var desc = _body_label(" · ".join(info_bits), COL_MUTE)
 			desc.add_theme_font_size_override("font_size", 16)
 			vb.add_child(desc)
+			if is_cleared and not is_decoded and chapter.get("decoded", []).size() > 0:
+				var decode_hint = _body_label("Cleared, but the signal's still a little garbled - retype cleanly to decode it fully.", COL_AMBER)
+				decode_hint.add_theme_font_size_override("font_size", 13)
+				vb.add_child(decode_hint)
 		else:
 			var locked_desc = _body_label("Clear the previous transmission to unlock.", COL_MUTE)
 			locked_desc.add_theme_font_size_override("font_size", 16)
@@ -285,7 +317,10 @@ func _render_intro() -> void:
 
 func _render_outro() -> void:
 	_stage = "outro"
-	_render_panel_page(_current_chapter.get("outro", []), func(): _complete_chapter(), false)
+	var pages: Array = _current_chapter.get("outro", []).duplicate()
+	if _decoded_this_run:
+		pages.append_array(_current_chapter.get("decoded", []))
+	_render_panel_page(pages, func(): _complete_chapter(), false)
 
 
 func _render_panel_page(pages: Array, on_last_next: Callable, allow_skip: bool = false) -> void:
@@ -366,10 +401,13 @@ func _render_challenge() -> void:
 	stats_row.add_child(timer_label)
 	_timer_label = timer_label
 
-	var word_label = Label.new()
-	word_label.add_theme_font_size_override("font_size", 22)
-	word_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var word_label = RichTextLabel.new()
+	word_label.bbcode_enabled = true
+	word_label.fit_content = true
+	word_label.scroll_active = false
 	word_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+	word_label.add_theme_font_size_override("normal_font_size", 22)
+	word_label.add_theme_font_size_override("bold_font_size", 22)
 	add_child(word_label)
 	_line_label = word_label
 
@@ -403,14 +441,25 @@ func _render_challenge() -> void:
 
 
 func _process(delta: float) -> void:
-	if _stage != "challenge" or _duration <= 0.0:
+	if _stage != "challenge":
 		return
-	_time_left -= delta
-	if _timer_label:
-		_timer_label.text = "%d s" % max(int(ceil(_time_left)), 0)
-	if _time_left <= 0.0:
-		_fail_reason = "time"
-		_render_fail()
+	if _duration > 0.0:
+		_time_left -= delta
+		if _timer_label:
+			_timer_label.text = "%d s" % max(int(ceil(_time_left)), 0)
+		if _time_left <= 0.0:
+			_fail_reason = "time"
+			_render_fail()
+			return
+	# Signal decay: pause mid-line for too long and the window narrows on
+	# its own, independent of the chapter's own countdown timer (some
+	# chapters don't have one at all) - this is about steady pace, not a
+	# hard deadline.
+	if _current_line != "" and is_instance_valid(_input_edit):
+		var idle_msec := Time.get_ticks_msec() - _last_keystroke_msec
+		if idle_msec > SIGNAL_HESITATE_AFTER_MSEC and _signal_clarity > SIGNAL_MIN_CLARITY:
+			_signal_clarity = max(_signal_clarity - SIGNAL_DECAY_PER_SEC * delta, SIGNAL_MIN_CLARITY)
+			_render_line_display(_input_edit.text)
 
 
 func _focus_input() -> void:
@@ -433,11 +482,11 @@ func _advance_line() -> void:
 		return
 	_current_line = String(_line_queue[_queue_index])
 	_queue_index += 1
-	if _line_label:
-		_line_label.text = _current_line
-		_line_label.modulate = Color.WHITE
+	_signal_clarity = SIGNAL_BASE_CLARITY
+	_last_keystroke_msec = Time.get_ticks_msec()
 	if _input_edit:
 		_input_edit.text = ""
+	_render_line_display("")
 
 
 func _on_text_changed(new_text: String) -> void:
@@ -445,10 +494,68 @@ func _on_text_changed(new_text: String) -> void:
 		return
 	if new_text == _current_line:
 		_submit_line(true)
-	elif _current_line.begins_with(new_text):
-		_line_label.modulate = Color.WHITE
+		return
+	if _current_line.begins_with(new_text):
+		# Typing correctly widens the visible window a little per
+		# character - keep moving cleanly and more of the line resolves
+		# ahead of you.
+		_signal_clarity = min(_signal_clarity + SIGNAL_GROW_PER_CHAR, SIGNAL_MAX_CLARITY)
 	else:
-		_line_label.modulate = COL_RED
+		# A wrong keystroke visibly degrades the signal instead of just
+		# flashing red - the window itself narrows, so a mistake costs you
+		# more than a moment's embarrassment.
+		_signal_clarity = max(_signal_clarity - SIGNAL_MISS_PENALTY, SIGNAL_MIN_CLARITY)
+	_last_keystroke_msec = Time.get_ticks_msec()
+	_render_line_display(new_text)
+
+
+## --- Signal Window rendering ---------------------------------------------
+## Builds the transmission line as three BBCode spans instead of showing
+## the whole target sentence: what you've already typed correctly (clean),
+## a short legible window just ahead of your cursor, and everything past
+## that as unresolved static - masked character-by-character with random
+## glyphs (spaces stay visible so word shape/length still reads). The
+## window's size (_signal_clarity) is driven live by _on_text_changed()
+## and _process(), so what's actually legible keeps shifting under you
+## based on how you're typing right now, not a fixed reveal.
+func _render_line_display(typed_text: String) -> void:
+	if not _line_label or _current_line == "":
+		return
+	var target := _current_line
+	var matched_len := 0
+	var max_common: int = min(typed_text.length(), target.length())
+	while matched_len < max_common and typed_text[matched_len] == target[matched_len]:
+		matched_len += 1
+	var mismatched := typed_text.length() > matched_len
+
+	var window := int(round(_signal_clarity))
+	var reveal_end: int = min(matched_len + window, target.length())
+
+	var confirmed := target.substr(0, matched_len)
+	var legible := target.substr(matched_len, reveal_end - matched_len)
+	var masked := target.substr(reveal_end)
+
+	var masked_display := ""
+	for c in masked:
+		if c == " ":
+			masked_display += " "
+		else:
+			masked_display += STATIC_GLYPHS[_rng.randi() % STATIC_GLYPHS.size()]
+
+	var confirmed_color := "#" + (COL_RED.to_html(false) if mismatched else COL_MINT.to_html(false))
+	var legible_color := "#" + (COL_AMBER.to_html(false) if mismatched else "ffffff")
+	var masked_color := "#5a5f6e"
+
+	var bbcode := "[center]"
+	bbcode += "[color=%s]%s[/color]" % [confirmed_color, _bbcode_escape(confirmed)]
+	bbcode += "[color=%s]%s[/color]" % [legible_color, _bbcode_escape(legible)]
+	bbcode += "[color=%s]%s[/color]" % [masked_color, _bbcode_escape(masked_display)]
+	bbcode += "[/center]"
+	_line_label.text = bbcode
+
+
+func _bbcode_escape(s: String) -> String:
+	return s.replace("[", "[lb]")
 
 
 func _on_text_submitted(new_text: String) -> void:
@@ -486,6 +593,7 @@ func _finish_challenge() -> void:
 		var total = _hits + _misses
 		_last_acc = 100.0 if total <= 0 else (float(_hits) / total) * 100.0
 		_game_state.register_practice_result("Story: %s" % _current_chapter.get("title", ""), _last_wpm, _last_acc, _lines_typed)
+	_decoded_this_run = StoryData.meets_decode_threshold(_last_acc, _misses)
 	_render_results()
 
 
@@ -502,6 +610,20 @@ func _render_results() -> void:
 	var diff_label = _body_label("Difficulty: %s" % String(_current_chapter.get("difficulty", "normal")).capitalize(), COL_MUTE)
 	diff_label.add_theme_font_size_override("font_size", 15)
 	add_child(diff_label)
+
+	# Decode Threshold: a clean run (see StoryData.meets_decode_threshold)
+	# unlocks an extra hidden fragment on the outro screen right after
+	# this. A messy-but-passed run still clears the chapter fine - it just
+	# doesn't get the deeper line, which is the whole point: it gives
+	# skilled/careful typing a payoff beyond "you didn't fail."
+	if _current_chapter.get("decoded", []).size() > 0:
+		var decode_label: Label
+		if _decoded_this_run:
+			decode_label = _body_label("◆ SIGNAL FULLY DECODED - a hidden fragment is waiting on the next screen.", COL_GOLD)
+		else:
+			decode_label = _body_label("◇ Signal partially decoded. Retype this transmission cleanly (96%+ accuracy, ≤1 miss) to decode it fully.", COL_MUTE)
+		decode_label.add_theme_font_size_override("font_size", 15)
+		add_child(decode_label)
 
 	var continue_btn = _nav_button("CONTINUE", COL_SKY)
 	continue_btn.pressed.connect(func():
@@ -546,6 +668,8 @@ func _complete_chapter() -> void:
 			_game_state.story_chapters_cleared.append(id)
 		if _current_chapter.get("difficulty", "normal") == "hard" and not _game_state.story_chapters_cleared_hard.has(id):
 			_game_state.story_chapters_cleared_hard.append(id)
+		if _decoded_this_run and not _game_state.story_chapters_decoded.has(id):
+			_game_state.story_chapters_decoded.append(id)
 		_game_state.save_data()
 	finished.emit()
 	_render_select()
