@@ -69,15 +69,10 @@ var _theme_keep_child_count := 0  # children added before the first _build_ui() 
 ## dark box on Casual, but a light parchment texture on Jelly/Arcade. Every
 ## label below used to be a flat white-based modulate tuned only for the
 ## dark case, which made the eyebrow/body/progress text nearly invisible on
-## the light panel. Route text color through this the same way
-## more_screen.gd already does, so it swaps to dark automatically outside
-## Casual.
-const COL_TEXT_ON_LIGHT := Color(0.12, 0.09, 0.04)
-
-func _tc(base_color: Color) -> Color:
-	if JellyTheme.current_style == "casual":
-		return base_color
-	return Color(COL_TEXT_ON_LIGHT.r, COL_TEXT_ON_LIGHT.g, COL_TEXT_ON_LIGHT.b, base_color.a)
+## the light panel. Now routed through JellyTheme.text_color() - this used
+## to be a local copy of that same logic (and more_screen.gd had its own
+## separate copy too), which meant fixing text contrast meant fixing it in
+## three places instead of one.
 
 
 func setup(root: Control, game_state: GameState) -> void:
@@ -185,7 +180,7 @@ func _build_ui() -> void:
 	eyebrow.text = "TUTORIAL"
 	eyebrow.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	eyebrow.add_theme_font_size_override("font_size", 14)
-	eyebrow.modulate = _tc(Color(1, 1, 1, 0.4))
+	eyebrow.modulate = JellyTheme.text_color(Color(1, 1, 1, 0.4))
 	vbox.add_child(eyebrow)
 
 	var divider := ColorRect.new()
@@ -225,7 +220,7 @@ func _build_ui() -> void:
 	_body_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 	_body_label.custom_minimum_size = Vector2(440, 0)
 	_body_label.add_theme_font_size_override("font_size", 20)
-	_body_label.modulate = _tc(Color(1, 1, 1, 0.85))
+	_body_label.modulate = JellyTheme.text_color(Color(1, 1, 1, 0.85))
 	vbox.add_child(_body_label)
 
 	# 6. Linear progress bar.
@@ -266,7 +261,7 @@ func _build_ui() -> void:
 	_progress_label = Label.new()
 	_progress_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_progress_label.add_theme_font_size_override("font_size", 13)
-	_progress_label.modulate = _tc(Color(1, 1, 1, 0.4))
+	_progress_label.modulate = JellyTheme.text_color(Color(1, 1, 1, 0.4))
 	vbox.add_child(_progress_label)
 
 	var hbox = HBoxContainer.new()
@@ -295,9 +290,9 @@ func _styled_button(txt: String, tint: Color, min_width: float) -> Button:
 	b.custom_minimum_size = Vector2(min_width, 60)
 	b.add_theme_font_size_override("font_size", 22)
 
-	var normal := _asset_button_style("res://assets/items/ui/button_rectangle.png", tint, 0.85)
-	var hover := _asset_button_style("res://assets/items/ui/button_rectangle.png", tint, 1.05)
-	var pressed := _asset_button_style("res://assets/items/ui/button_rectangle_depth.png", tint, 1.0)
+	var normal := JellyTheme.button_style(tint, 0.85, false)
+	var hover := JellyTheme.button_style(tint, 1.05, false)
+	var pressed := JellyTheme.button_style(tint, 1.0, true)
 
 	b.add_theme_stylebox_override("normal", normal)
 	b.add_theme_stylebox_override("hover", hover)
@@ -314,8 +309,6 @@ func _styled_button(txt: String, tint: Color, min_width: float) -> Button:
 	)
 	return b
 
-func _asset_button_style(texture_path: String, tint: Color, brightness: float) -> StyleBox:
-	return JellyTheme.button_style(tint, brightness, texture_path.contains("depth"))
 
 
 func _render_page(animate: bool = true) -> void:
