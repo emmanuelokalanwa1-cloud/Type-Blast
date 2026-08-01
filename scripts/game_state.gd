@@ -80,6 +80,13 @@ var best_survival_streak := 0
 var story_chapter_unlocked := 1
 var story_chapters_cleared: Array = []
 var story_chapters_cleared_hard: Array = []
+## "Decode Threshold" - clearing a chapter with clean enough typing (see
+## StoryData.meets_decode_threshold) reveals extra deeper-lore outro lines
+## on top of the normal ones. This tracks which chapters have had that
+## bonus fully unlocked, separately from story_chapters_cleared, so a messy
+## clear still counts as "cleared" but the player can see there's more of
+## the real story still to uncover by replaying more cleanly.
+var story_chapters_decoded: Array = []
 var story_difficulty := "normal"
 
 # --- new: rolling history of finished runs, newest last, capped at 50.
@@ -377,6 +384,7 @@ func save_data() -> void:
 	cfg.set_value("extra", "story_chapter_unlocked", story_chapter_unlocked)
 	cfg.set_value("extra", "story_chapters_cleared", story_chapters_cleared)
 	cfg.set_value("extra", "story_chapters_cleared_hard", story_chapters_cleared_hard)
+	cfg.set_value("extra", "story_chapters_decoded", story_chapters_decoded)
 	cfg.set_value("extra", "story_difficulty", story_difficulty)
 	cfg.set_value("extra", "run_history", run_history)
 	cfg.set_value("extra", "current_streak", current_streak)
@@ -462,6 +470,7 @@ func load_save_data() -> void:
 	story_chapter_unlocked = cfg.get_value("extra", "story_chapter_unlocked", 1)
 	story_chapters_cleared = cfg.get_value("extra", "story_chapters_cleared", [])
 	story_chapters_cleared_hard = cfg.get_value("extra", "story_chapters_cleared_hard", [])
+	story_chapters_decoded = cfg.get_value("extra", "story_chapters_decoded", [])
 	story_difficulty = cfg.get_value("extra", "story_difficulty", "normal")
 	run_history = cfg.get_value("extra", "run_history", [])
 	current_streak = cfg.get_value("extra", "current_streak", 0)
