@@ -461,6 +461,42 @@ const CATEGORIES := {
 }
 
 
+## Quick real-internet check, deliberately NOT the relay server itself -
+## Render's free tier can be asleep for 30-60s on a cold start even when
+## the device's connection is perfectly fine, and we don't want the
+## Online Tournament button greyed out just because the server napped.
+## Hits Google's captive-portal endpoint (fast, always up, tiny reply)
+## and calls on_result.call(true/false) once it knows.
+func _probe_internet(on_result: Callable) -> void:
+	var req := HTTPRequest.new()
+	req.timeout = 5.0
+	add_child(req)
+	req.request_completed.connect(func(result, _code, _headers, _body):
+		if is_instance_valid(req):
+			req.queue_free()
+		on_result.call(result == HTTPRequest.RESULT_SUCCESS)
+	)
+	var err := req.request("https://www.gstatic.com/generate_204")
+	if err != OK:
+		req.queue_free()
+		on_result.call(false)
+
+
+## Greys out the Online Tournament row until a connectivity probe comes
+## back positive - re-checks every time this category is opened, since
+## a phone can lose signal between visits.
+func _gate_online_tournament_button(btn: Button) -> void:
+	var base_text := btn.text
+	btn.disabled = true
+	btn.text = base_text + "  (checking…)"
+	_probe_internet(func(ok: bool):
+		if not is_instance_valid(btn):
+			return
+		btn.disabled = not ok
+		btn.text = base_text if ok else base_text + "  (no internet)"
+	)
+
+
 func _build_category_list(cat_id: String) -> void:
 	_current_view = cat_id
 	_clear_content()
@@ -482,6 +518,7 @@ func _build_category_list(cat_id: String) -> void:
 		_apply_text_style(note, COL_MUTE)
 		_content.add_child(note)
 
+	var online_tournament_btn: Button = null
 	for e in cat["entries"]:
 		var b = _make_nav_button(e[0], e[2])
 		var target = e[1]
@@ -490,6 +527,11 @@ func _build_category_list(cat_id: String) -> void:
 			_go_to(target)
 		)
 		_content.add_child(b)
+		if target == "online_tournament":
+			online_tournament_btn = b
+
+	if cat_id == "cat_multiplayer" and is_instance_valid(online_tournament_btn):
+		_gate_online_tournament_button(online_tournament_btn)
 
 
 # --- Practice Modes submenu ---
