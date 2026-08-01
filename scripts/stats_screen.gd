@@ -421,9 +421,9 @@ func _styled_button(txt: String, tint: Color) -> Button:
 	b.custom_minimum_size = Vector2(0, 62)
 	b.add_theme_font_size_override("font_size", 24)
 
-	var normal := _asset_button_style("res://assets/items/ui/button_rectangle.png", tint, 0.85)
-	var hover := _asset_button_style("res://assets/items/ui/button_rectangle.png", tint, 1.05)
-	var pressed := _asset_button_style("res://assets/items/ui/button_rectangle_depth.png", tint, 1.0)
+	var normal := JellyTheme.button_style(tint, 0.85, false)
+	var hover := JellyTheme.button_style(tint, 1.05, false)
+	var pressed := JellyTheme.button_style(tint, 1.0, true)
 
 	b.add_theme_stylebox_override("normal", normal)
 	b.add_theme_stylebox_override("hover", hover)
@@ -449,8 +449,6 @@ func _styled_button(txt: String, tint: Color) -> Button:
 	return b
 
 
-func _asset_button_style(texture_path: String, tint: Color, brightness: float) -> StyleBox:
-	return JellyTheme.button_style(tint, brightness, texture_path.contains("depth"))
 
 
 func _make_corner_bracket(flip: bool) -> Control:
