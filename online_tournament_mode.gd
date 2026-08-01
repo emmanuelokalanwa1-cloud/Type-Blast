@@ -141,7 +141,78 @@ func configure(game_state: GameState, audio: AudioManager, tournament_manager: T
 	_tm.connection_failed.connect(_on_connection_failed)
 	_tm.disconnected_unexpectedly.connect(_on_disconnected_unexpectedly)
 
-	_show_menu()
+	_show_checking_internet()
+
+
+## Quick real-internet probe (same target/reasoning as MoreScreen's
+## gate on the entry button - decoupled from the relay server's own
+## uptime). Runs every time this screen opens, since the phone can lose
+## signal between tapping the row in MoreScreen and this screen
+## actually appearing.
+func _probe_internet(on_result: Callable) -> void:
+	var req := HTTPRequest.new()
+	req.timeout = 5.0
+	add_child(req)
+	req.request_completed.connect(func(result, _code, _headers, _body):
+		if is_instance_valid(req):
+			req.queue_free()
+		on_result.call(result == HTTPRequest.RESULT_SUCCESS)
+	)
+	var err := req.request("https://www.gstatic.com/generate_204")
+	if err != OK:
+		req.queue_free()
+		on_result.call(false)
+
+
+func _show_checking_internet() -> void:
+	_subtitle_label.text = "Checking your connection…"
+	_clear_body()
+	_probe_internet(func(ok: bool):
+		if not is_instance_valid(self):
+			return
+		if ok:
+			_show_announcement()
+		else:
+			_show_no_internet()
+	)
+
+
+func _show_no_internet() -> void:
+	_subtitle_label.text = "The Championship needs an internet connection."
+	_clear_body()
+
+	var panel := _styled_panel(18)
+	_body_holder.add_child(panel)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 8)
+	panel.add_child(box)
+
+	var icon := Label.new()
+	icon.text = "⚠"
+	icon.add_theme_font_size_override("font_size", 28)
+	icon.add_theme_color_override("font_color", COL_RED)
+	icon.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(icon)
+
+	var msg := Label.new()
+	msg.text = "No internet connection found. Online Tournament needs a live connection to match you with other racers - check Wi-Fi or mobile data and try again."
+	msg.autowrap_mode = TextServer.AUTOWRAP_WORD
+	msg.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	msg.modulate = COL_MUTE
+	box.add_child(msg)
+
+	var retry_btn := Button.new()
+	retry_btn.text = "Try Again"
+	retry_btn.custom_minimum_size = Vector2(0, 48)
+	_body_holder.add_child(retry_btn)
+	retry_btn.pressed.connect(_show_checking_internet)
+
+	var cancel_btn := Button.new()
+	cancel_btn.text = "Cancel"
+	cancel_btn.flat = true
+	cancel_btn.modulate = COL_MUTE
+	_body_holder.add_child(cancel_btn)
+	cancel_btn.pressed.connect(func(): _leave(true))
 
 
 func _clear_body() -> void:
@@ -173,6 +244,111 @@ func _styled_panel(margin: int) -> PanelContainer:
 	return panel
 
 
+# --- Announcement / event hub ---
+
+## Landing screen shown the moment a player opens Online Tournament, before
+## they ever see a create/join form. Frames the feature the way a real
+## typing-competition event page would: what it is, how a bracket run
+## actually works here, and why the results are trustworthy - then hands
+## off to the existing create/join flow untouched.
+func _show_announcement() -> void:
+	_subtitle_label.text = "The official TypeBlast bracket event - live, online, server-verified."
+	_clear_body()
+
+	var hero := _styled_panel(18)
+	_body_holder.add_child(hero)
+	var hero_box := VBoxContainer.new()
+	hero_box.add_theme_constant_override("separation", 6)
+	hero.add_child(hero_box)
+
+	var badge := Label.new()
+	badge.text = "★ COMMUNITY CHAMPIONSHIP ★"
+	badge.add_theme_font_size_override("font_size", 13)
+	badge.add_theme_color_override("font_color", COL_GOLD)
+	badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hero_box.add_child(badge)
+
+	var headline := Label.new()
+	headline.text = "Think you can type with the best?"
+	headline.autowrap_mode = TextServer.AUTOWRAP_WORD
+	headline.add_theme_font_size_override("font_size", 19)
+	headline.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hero_box.add_child(headline)
+
+	var blurb := Label.new()
+	blurb.text = "Single-elimination brackets of 2, 4, 8, or 16 racers. Every match runs on the same word list for both players at once, decided by the server - not the honor system."
+	blurb.autowrap_mode = TextServer.AUTOWRAP_WORD
+	blurb.modulate = COL_MUTE
+	blurb.add_theme_font_size_override("font_size", 14)
+	blurb.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hero_box.add_child(blurb)
+
+	# --- "How it works" steps ---
+	var steps_panel := _styled_panel(16)
+	_body_holder.add_child(steps_panel)
+	var steps_box := VBoxContainer.new()
+	steps_box.add_theme_constant_override("separation", 10)
+	steps_panel.add_child(steps_box)
+
+	var steps_title := Label.new()
+	steps_title.text = "HOW IT WORKS"
+	steps_title.add_theme_font_size_override("font_size", 13)
+	steps_title.add_theme_color_override("font_color", COL_ONLINE)
+	steps_box.add_child(steps_title)
+
+	var steps := [
+		"1. Host picks a bracket size and gets a room code.",
+		"2. Racers join with that code from anywhere online.",
+		"3. Host starts it - the server builds the bracket and sends everyone the same words for each match.",
+		"4. Win your race, advance. Lose, and you can still spectate the rest of the bracket live.",
+	]
+	for s in steps:
+		var l := Label.new()
+		l.text = s
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD
+		l.add_theme_font_size_override("font_size", 14)
+		steps_box.add_child(l)
+
+	# --- Fair-play note, framed like a real ranked leaderboard's rules ---
+	var fair_panel := _styled_panel(14)
+	_body_holder.add_child(fair_panel)
+	var fair_box := HBoxContainer.new()
+	fair_box.add_theme_constant_override("separation", 10)
+	fair_panel.add_child(fair_box)
+	var fair_icon := Label.new()
+	fair_icon.text = "✓"
+	fair_icon.add_theme_color_override("font_color", COL_MINT)
+	fair_icon.add_theme_font_size_override("font_size", 18)
+	fair_box.add_child(fair_icon)
+	var fair_label := Label.new()
+	fair_label.text = "Fair by design: word lists are generated once per match, server-side, and sent identically to both racers - so it's finger speed, not who got the easier list."
+	fair_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+	fair_label.modulate = COL_MUTE
+	fair_label.add_theme_font_size_override("font_size", 13)
+	fair_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	fair_box.add_child(fair_label)
+
+	# --- CTAs ---
+	var host_btn := Button.new()
+	host_btn.text = "★ Host a Championship"
+	host_btn.custom_minimum_size = Vector2(0, 48)
+	_body_holder.add_child(host_btn)
+	host_btn.pressed.connect(_show_create_form)
+
+	var join_btn := Button.new()
+	join_btn.text = "Join with a Code"
+	join_btn.custom_minimum_size = Vector2(0, 48)
+	_body_holder.add_child(join_btn)
+	join_btn.pressed.connect(_show_join_form)
+
+	var cancel_btn := Button.new()
+	cancel_btn.text = "Not now"
+	cancel_btn.flat = true
+	cancel_btn.modulate = COL_MUTE
+	_body_holder.add_child(cancel_btn)
+	cancel_btn.pressed.connect(func(): _leave(true))
+
+
 # --- Menu ---
 
 func _show_menu() -> void:
@@ -190,6 +366,13 @@ func _show_menu() -> void:
 	join_btn.custom_minimum_size = Vector2(0, 48)
 	_body_holder.add_child(join_btn)
 	join_btn.pressed.connect(_show_join_form)
+
+	var back_btn := Button.new()
+	back_btn.text = "◀ Back"
+	back_btn.flat = true
+	back_btn.modulate = COL_MUTE
+	_body_holder.add_child(back_btn)
+	back_btn.pressed.connect(_show_announcement)
 
 	var cancel_btn := Button.new()
 	cancel_btn.text = "Cancel"
