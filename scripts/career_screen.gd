@@ -335,13 +335,13 @@ func _make_button(txt: String, accent: Color) -> Button:
 	btn.add_theme_font_size_override("font_size", 20)
 	btn.pivot_offset = btn.custom_minimum_size / 2
 
-	var normal := _asset_button_style("res://assets/items/ui/button_rectangle.png", accent, 0.85)
+	var normal := JellyTheme.button_style(accent, 0.85, false)
 	btn.add_theme_stylebox_override("normal", normal)
 
-	var hover := _asset_button_style("res://assets/items/ui/button_rectangle.png", accent, 1.05)
+	var hover := JellyTheme.button_style(accent, 1.05, false)
 	btn.add_theme_stylebox_override("hover", hover)
 
-	var pressed_style := _asset_button_style("res://assets/items/ui/button_rectangle_depth.png", accent, 1.0)
+	var pressed_style := JellyTheme.button_style(accent, 1.0, true)
 	btn.add_theme_stylebox_override("pressed", pressed_style)
 
 	btn.mouse_entered.connect(func(): create_tween().tween_property(btn, "scale", Vector2(1.03, 1.03), 0.12))
@@ -350,8 +350,6 @@ func _make_button(txt: String, accent: Color) -> Button:
 	btn.button_up.connect(func(): create_tween().tween_property(btn, "scale", Vector2(1.03, 1.03), 0.08))
 	return btn
 
-func _asset_button_style(texture_path: String, tint: Color, brightness: float) -> StyleBox:
-	return JellyTheme.button_style(tint, brightness, texture_path.contains("depth"))
 
 # ---------------------------------------------------------------------
 # LADDER LIST (grouped into 4 tiers of 5 ranks each)
@@ -389,7 +387,7 @@ func _rebuild_list() -> void:
 		header_row.add_theme_constant_override("separation", 8)
 
 		var toggle_btn = Button.new()
-		toggle_btn.text = "â–¼" if _tier_expanded[tier] else "â–¶"
+		toggle_btn.text = "▼" if _tier_expanded[tier] else "▶"
 		toggle_btn.custom_minimum_size = Vector2(30, 30)
 		toggle_btn.flat = true
 		header_row.add_child(toggle_btn)
@@ -402,7 +400,7 @@ func _rebuild_list() -> void:
 
 		if tier_done == ranks_in_tier.size():
 			var badge = Label.new()
-			badge.text = "â˜… " + LocalizationManager.get_string("tier_cleared", _game_state.selected_language).to_upper()
+			badge.text = "★ " + LocalizationManager.get_string("tier_cleared", _game_state.selected_language).to_upper()
 			badge.add_theme_font_size_override("font_size", 17)
 			badge.modulate = JellyTheme.text_color(COL_GOLD)
 			header_row.add_child(badge)
@@ -415,7 +413,7 @@ func _rebuild_list() -> void:
 		toggle_btn.pressed.connect(func():
 			_tier_expanded[tier] = not _tier_expanded[tier]
 			rows_container.visible = _tier_expanded[tier]
-			toggle_btn.text = "â–¼" if _tier_expanded[tier] else "â–¶"
+			toggle_btn.text = "▼" if _tier_expanded[tier] else "▶"
 		)
 		_list_vbox.add_child(rows_container)
 
@@ -457,7 +455,7 @@ func _build_rank_row(rank: int, tier_color: Color) -> Control:
 		status_text = "LOCKED"
 		tint = COL_LOCK
 	elif complete:
-		status_text = "â˜… COMPLETE  (%d/%d missions)" % [done, progress]
+		status_text = "★ COMPLETE  (%d/%d missions)" % [done, progress]
 		tint = COL_GOLD
 	else:
 		status_text = "%d/%d missions to rank up" % [done, need]
@@ -469,10 +467,10 @@ func _build_rank_row(rank: int, tier_color: Color) -> Control:
 		row.expand_icon = false
 		row.add_theme_constant_override("h_separation", 12)
 		row.add_theme_color_override("icon_disabled_color", Color(1, 1, 1, 0.35))
-		row.text = "  RANK %d â€” %s        %s" % [rank, CareerData.flavor_for_rank(rank).to_upper(), status_text]
+		row.text = "  RANK %d — %s        %s" % [rank, CareerData.flavor_for_rank(rank).to_upper(), status_text]
 	else:
-		var icon = "â—‹" if not unlocked else ("â˜…" if complete else "â–¶")
-		row.text = "   %s   RANK %d â€” %s        %s" % [icon, rank, CareerData.flavor_for_rank(rank).to_upper(), status_text]
+		var icon = "○" if not unlocked else ("★" if complete else "▶")
+		row.text = "   %s   RANK %d — %s        %s" % [icon, rank, CareerData.flavor_for_rank(rank).to_upper(), status_text]
 
 	var normal := StyleBoxFlat.new()
 	normal.bg_color = Color(tier_color.r, tier_color.g, tier_color.b, 0.07) if unlocked else Color(1, 1, 1, 0.02)
@@ -520,7 +518,7 @@ func _update_status_card() -> void:
 	_status_progress_label.text = "%d / %d missions cleared this rank (%d needed to rank up)" % [
 		progress.done, CareerData.missions_for_rank(rank).size(), progress.need
 	]
-	_status_speed_label.text = "Word length: %s   â€¢   Fall-speed bonus: +%d" % [
+	_status_speed_label.text = "Word length: %s   •   Fall-speed bonus: +%d" % [
 		CareerData.difficulty_for_rank(rank), int(CareerData.fall_speed_bonus_for_rank(rank))
 	]
 	if is_instance_valid(_status_lore_label):
@@ -534,7 +532,7 @@ func _update_status_card() -> void:
 func _update_overall_progress() -> void:
 	var total = CareerData.rank_count()
 	var unlocked = _career_manager.unlocked_rank
-	_overall_label.text = LocalizationManager.get_string("ladder_progress", _game_state.selected_language).to_upper() + " â€” " + (LocalizationManager.get_string("rank_of_unlocked", _game_state.selected_language) % [unlocked, total]).to_upper()
+	_overall_label.text = LocalizationManager.get_string("ladder_progress", _game_state.selected_language).to_upper() + " — " + (LocalizationManager.get_string("rank_of_unlocked", _game_state.selected_language) % [unlocked, total]).to_upper()
 	if is_instance_valid(_overall_fill):
 		var pct = float(unlocked - 1) / float(max(total - 1, 1))
 		_overall_fill.anchor_right = clamp(pct, 0.0, 1.0)
@@ -582,7 +580,7 @@ func close() -> void:
 	closed.emit()
 
 # ---------------------------------------------------------------------
-# "Rank up" certificate popup â€” shown from main.gd right after a run
+# "Rank up" certificate popup — shown from main.gd right after a run
 # clears enough missions to open the next rank.
 # ---------------------------------------------------------------------
 
@@ -629,7 +627,7 @@ func _build_certificate_popup(root: Control) -> void:
 	vbox.add_child(icon_center)
 
 	_cert_star_fallback = Label.new()
-	_cert_star_fallback.text = "â˜…"
+	_cert_star_fallback.text = "★"
 	_cert_star_fallback.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_cert_star_fallback.add_theme_font_size_override("font_size", 48)
 	_cert_star_fallback.modulate = JellyTheme.text_color(COL_GOLD)
@@ -676,7 +674,7 @@ func show_rank_up(rank: int, _title: String) -> void:
 	tw.tween_property(_cert_card, "modulate:a", 1.0, 0.25)
 
 # ---------------------------------------------------------------------
-# "Climb complete" popup â€” shown once the top rank's requirement is met.
+# "Climb complete" popup — shown once the top rank's requirement is met.
 # ---------------------------------------------------------------------
 
 func _build_climb_complete_popup(root: Control) -> void:
@@ -715,7 +713,7 @@ func _build_climb_complete_popup(root: Control) -> void:
 	_climb_card.add_child(vbox)
 
 	var crown = Label.new()
-	crown.text = "â˜…"
+	crown.text = "★"
 	crown.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	crown.add_theme_font_size_override("font_size", 56)
 	vbox.add_child(crown)
