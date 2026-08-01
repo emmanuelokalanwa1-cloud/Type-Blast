@@ -39,12 +39,14 @@ const SUPPORT_EMAIL := "support@example.com"
 # in this screen routes its color through, so text automatically flips to
 # bold near-black on a light panel and stays as the original pastel/mute
 # tint on Casual's dark one - instead of hand-tuning 70+ individual labels.
-const COL_TEXT_ON_LIGHT := Color(0.1, 0.07, 0.03)
-
+#
+# _tc() used to have its own copy of the light/dark darkening math here
+# (and tutorial_overlay.gd had a third copy) - now it just forwards to
+# JellyTheme.text_color(), the same place every other screen in the game
+# gets its adaptive color from, so there's one implementation to fix
+# instead of three that can quietly drift apart.
 func _tc(base_color: Color) -> Color:
-	if JellyTheme.current_style == "casual":
-		return base_color
-	return Color(COL_TEXT_ON_LIGHT.r, COL_TEXT_ON_LIGHT.g, COL_TEXT_ON_LIGHT.b, base_color.a)
+	return JellyTheme.text_color(base_color)
 
 ## For plain modulate-tinted Labels/Buttons (the vast majority of text in
 ## this screen). Swaps in near-black + bold automatically outside Casual.
